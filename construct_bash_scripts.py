@@ -41,12 +41,14 @@ parser = argparse.ArgumentParser(description='create bash files for spike sortin
 parser.add_argument('subj_path')
 parser.add_argument('--sesslist', default = "")
 parser.add_argument('--output_suffix', default = "initial")
+parser.add_argument('--keep_splits', action='store_false')
 
 args = parser.parse_args()
 
 subj_path = args.subj_path
 sesslist_fname = args.sesslist
 output_suffix = args.output_suffix
+delete_splits = args.keep_splits
 
 timestamp = time.strftime("%d_%m_%Y--%H_%M_%S")
 
@@ -172,7 +174,7 @@ for sess in subj_path_files:
                     else:
                         sort_big_bash_xlarge_list.append("bash " + session_dir + "/" + current_bash_fname + "\n")
 
-                    if os.path.isdir(session_dir + "/splits"):
+                    if delete_splits and os.path.isdir(session_dir + "/splits"):
                         shutil.rmtree(session_dir + "/splits")
 
                     time_log_fpath = session_dir + "/time.log"
@@ -881,11 +883,11 @@ target_num_bundle_groups = 15
 bundle_size = math.ceil(len(sort_big_bash_list) / target_num_bundle_groups)
 sort_swarm_command = sort_swarm_command % str(bundle_size)
 
-target_num_bundle_groups = 8
+target_num_bundle_groups = 30
 bundle_size = math.ceil(len(sort_big_bash_large_list) / target_num_bundle_groups)
 sort_large_swarm_command = sort_large_swarm_command % str(bundle_size)
 
-target_num_bundle_groups = 8
+target_num_bundle_groups = 30
 bundle_size = math.ceil(len(sort_big_bash_xlarge_list) / target_num_bundle_groups)
 sort_xlarge_swarm_command = sort_xlarge_swarm_command % str(bundle_size)
 
