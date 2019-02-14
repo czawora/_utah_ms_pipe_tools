@@ -142,11 +142,12 @@ for idx, sess in enumerate(sess_list):
         current_ignore_string = ""
         for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
 
+            ignore_fname = ignore_fpath.split("/")[-1]
             ignore_file = open(ignore_fpath)
             ignore_lines = [l.strip("\n") for l in ignore_file]
             ignore_file.close()
 
-            current_ignore_string += sess.split("/")[-1] + " : ignore -- " + " ".join(ignore_lines)
+            current_ignore_string += " " + sess.split("/")[-1] + " : " + ignore_fname + " -- " + " ".join(ignore_lines)
 
         ignore_strings.append(current_ignore_string)
 
