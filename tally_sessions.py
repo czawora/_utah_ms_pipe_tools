@@ -68,7 +68,7 @@ for idx, sess in enumerate(sess_list):
     # is there a ignore_me.txt in this session
     if glob.glob(sess_path + "/_ignore_me*") != []:
 
-        ignore_status = 1
+        ignore_status = len(glob.glob(sess_path + "/_ignore_me*"))
 
     if os.path.isdir(sess_path_outputs):
 
@@ -137,13 +137,15 @@ for idx, sess in enumerate(sess_list):
     # traceFigs = not easily indicative
     # splits_chan == splits_done
 
-    if ignore_status == 1:
+    if ignore_status != 0:
 
-        ignore_file = open(sess_path + "/_ignore_me.txt")
-        ignore_lines = [l.strip("\n") for l in ignore_file]
-        ignore_file.close()
+        for ignore_file in glob.glob(sess_path + "/_ignore_me*.txt"):
 
-        ignore_strings.append(sess.split("/")[-1] + " : ignore -- " + " ".join(ignore_lines))
+            ignore_file = open(ignore_file)
+            ignore_lines = [l.strip("\n") for l in ignore_file]
+            ignore_file.close()
+
+            ignore_strings.append(sess.split("/")[-1] + " : ignore -- " + " ".join(ignore_lines))
 
     elif not (ignore_status == 0 and outputs_status == 1 and spikeInfo_status == 1 and spikeWaveform_status == 1 and sortSummary_status == 1 and splits_chan_status == splits_done_status and (splits_chan_status > 64 or splits_chan_status == 0)):
 
