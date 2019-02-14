@@ -254,6 +254,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("\n\n")
 
                     sub_cmd_file.write("echo \"start nsx2mda\"\n")
+                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                     # convert to mda format
                     matlab_command = "cd " + nsx2mda_matlab_dir + "/_nsx2mda; ./run_nsx2mda_swarm.sh " + matlab_compiler_ver_str
@@ -341,6 +342,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("source " + MS_env_source + "\n\n")
 
                     sub_cmd_file.write("echo \"start bandpass\"\n")
+                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                     sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(iRefset))
                     sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_bp\n\n")
@@ -435,6 +437,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("\n\n")
 
                     sub_cmd_file.write("echo \"start reref\"\n")
+                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                     sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
                     sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp$\"`\n" % str(iRefset))
@@ -521,6 +524,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("source " + MS_env_source + "\n\n")
 
                     sub_cmd_file.write("echo \"start whiten\"\n")
+                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                     sub_cmd_file.write("whiten_input=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref$\"`\n" % str(iRefset))
                     sub_cmd_file.write("whiten_output_mda=${whiten_input}_whiten\n\n")
@@ -616,6 +620,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(iRefset))
                     sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
                     sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
+                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                     split_dir = session_dir + "/splits"
 
@@ -757,6 +762,8 @@ for sess in subj_path_files:
                         sub_cmd_file.write("if [ -f \"" + summary_fpath + "\" ]; then\n")
                         sub_cmd_file.write("rm " + summary_fpath + "\n")
                         sub_cmd_file.write("fi\n\n")
+
+                        sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\"\n")
 
                         matlab_command = "cd " + construct_spikeInfoMS_matlab_dir + "/_construct_spikeInfoMS; ./run_construct_spikeInfoMS_swarm.sh " + matlab_compiler_ver_str
 
