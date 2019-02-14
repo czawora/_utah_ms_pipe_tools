@@ -66,7 +66,7 @@ for idx, sess in enumerate(sess_list):
     splits_done_status = 0
 
     # is there a ignore_me.txt in this session
-    if glob.glob(sess_path + "/_ignore_me.txt") != []:
+    if glob.glob(sess_path + "/_ignore_me*") != []:
 
         ignore_status = 1
 
