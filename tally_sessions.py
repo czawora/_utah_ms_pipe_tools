@@ -139,13 +139,16 @@ for idx, sess in enumerate(sess_list):
 
     if ignore_status != 0:
 
+        current_ignore_string = ""
         for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
 
             ignore_file = open(ignore_fpath)
             ignore_lines = [l.strip("\n") for l in ignore_file]
             ignore_file.close()
 
-            ignore_strings.append(sess.split("/")[-1] + " : ignore -- " + " ".join(ignore_lines))
+            current_ignore_string += sess.split("/")[-1] + " : ignore -- " + " ".join(ignore_lines)
+
+        ignore_strings.append(current_ignore_string)
 
     elif not (ignore_status == 0 and outputs_status == 1 and spikeInfo_status == 1 and spikeWaveform_status == 1 and sortSummary_status == 1 and splits_chan_status == splits_done_status and (splits_chan_status > 64 or splits_chan_status == 0)):
 
