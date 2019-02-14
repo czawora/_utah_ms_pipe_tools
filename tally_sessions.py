@@ -139,9 +139,9 @@ for idx, sess in enumerate(sess_list):
 
     if ignore_status != 0:
 
-        for ignore_file in glob.glob(sess_path + "/_ignore_me*.txt"):
+        for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
 
-            ignore_file = open(ignore_file)
+            ignore_file = open(ignore_fpath)
             ignore_lines = [l.strip("\n") for l in ignore_file]
             ignore_file.close()
 
