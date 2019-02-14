@@ -861,6 +861,9 @@ for sess in subj_path_files:
                 ###################################################################################################
                 ###################################################################################################
 
+sort_big_bash_list += sort_big_bash_large_list
+sort_big_bash_large_list = []
+
 sort_big_bash_fname = "sort_%s_big_bash.sh" % output_suffix
 sort_big_bash_large_fname = "sort_%s_big_bash_large.sh" % output_suffix
 sort_big_bash_xlarge_fname = "sort_%s_big_bash_xlarge.sh" % output_suffix
