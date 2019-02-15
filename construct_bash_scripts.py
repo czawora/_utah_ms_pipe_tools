@@ -932,7 +932,7 @@ if sort_big_bash_list != []:
 if sort_big_bash_large_list != []:
 
     print("sessions in sort_big_bash_large_list: " + str(len(sort_big_bash_large_list)))
-    print("                              : " + str(big_bash_large_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_large_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_large_bundle_size))
+    print("                                    : " + str(big_bash_large_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_large_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_large_bundle_size))
 
     sort_big_bash_large_file = open(swarm_files_path + "/" + sort_big_bash_large_fname, 'w')
 
@@ -946,7 +946,7 @@ if sort_big_bash_large_list != []:
 if sort_big_bash_xlarge_list != []:
 
     print("sessions in sort_big_bash_xlarge_list: " + str(len(sort_big_bash_xlarge_list)))
-    print("                              : " + str(big_bash_xlarge_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_xlarge_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_xlarge_bundle_size))
+    print("                                     : " + str(big_bash_xlarge_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_xlarge_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_xlarge_bundle_size))
 
     sort_big_bash_xlarge_file = open(swarm_files_path + "/" + sort_big_bash_xlarge_fname, 'w')
 
