@@ -864,14 +864,23 @@ for sess in subj_path_files:
 sort_big_bash_list += sort_big_bash_large_list
 sort_big_bash_large_list = []
 
+user_cpu_limit = 500
+total_big_bash_num = len(sort_big_bash_list + sort_big_bash_large_list + sort_big_bash_xlarge_list)
+
+big_bash_perc_cpu = math.floor(len(sort_big_bash_list)/float(total_big_bash_num) * user_cpu_limit)
+big_bash_large_perc_cpu = math.floor(len(sort_big_bash_large_list)/float(total_big_bash_num) * user_cpu_limit)
+big_bash_xlarge_perc_cpu = math.floor(len(sort_big_bash_xlarge_list)/float(total_big_bash_num) * user_cpu_limit)
+
 sort_big_bash_fname = "sort_%s_big_bash.sh" % output_suffix
 sort_big_bash_large_fname = "sort_%s_big_bash_large.sh" % output_suffix
 sort_big_bash_xlarge_fname = "sort_%s_big_bash_xlarge.sh" % output_suffix
 sort_swarm_fname = "sort_%s_swarm.sh" % output_suffix
 
-sort_swarm_command = "swarm -g 220 -b %s -t 10 --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_large_swarm_command = "swarm -g 400 -b %s -t 10 --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_xlarge_swarm_command = "swarm -g 700 -b %s -t 10 --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+swarm_cpu_count = 10
+
+sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
 
 # make subj_path/run_files if it doesnt exist, bash scripts go in there
 swarm_files_path = subj_path + "/_swarms"
@@ -889,17 +898,17 @@ sort_large_swarm_command += " -f "
 sort_xlarge_swarm_command += swarm_files_path + "/log_dump"
 sort_xlarge_swarm_command += " -f "
 
-target_num_bundle_groups = 15
-bundle_size = math.ceil(len(sort_big_bash_list) / target_num_bundle_groups)
-sort_swarm_command = sort_swarm_command % str(bundle_size)
+big_bash_target_num_bundle_groups = big_bash_perc_cpu/float(swarm_cpu_count)
+big_bash_bundle_size = math.ceil(len(sort_big_bash_list) / big_bash_target_num_bundle_groups)
+sort_swarm_command = sort_swarm_command % str(big_bash_bundle_size)
 
-target_num_bundle_groups = 30
-bundle_size = math.ceil(len(sort_big_bash_large_list) / target_num_bundle_groups)
-sort_large_swarm_command = sort_large_swarm_command % str(bundle_size)
+big_bash_large_target_num_bundle_groups = big_bash_large_perc_cpu/float(swarm_cpu_count)
+big_bash_large_bundle_size = math.ceil(len(sort_big_bash_large_list) / big_bash_large_target_num_bundle_groups)
+sort_large_swarm_command = sort_large_swarm_command % str(big_bash_large_bundle_size)
 
-target_num_bundle_groups = 30
-bundle_size = math.ceil(len(sort_big_bash_xlarge_list) / target_num_bundle_groups)
-sort_xlarge_swarm_command = sort_xlarge_swarm_command % str(bundle_size)
+big_bash_xlarge_target_num_bundle_groups = big_bash_xlarge_perc_cpu/float(swarm_cpu_count)
+big_bash_xlarge_bundle_size = math.ceil(len(sort_big_bash_xlarge_list) / big_bash_xlarge_target_num_bundle_groups)
+sort_xlarge_swarm_command = sort_xlarge_swarm_command % str(big_bash_xlarge_bundle_size)
 
 print("session_count with nsx file: " + str(session_count))
 
@@ -909,6 +918,7 @@ swarm_file = open(swarm_files_path + "/" + sort_swarm_fname, 'w')
 if sort_big_bash_list != []:
 
     print("sessions in sort_big_bash_list: " + str(len(sort_big_bash_list)))
+    print("                              : " + str(big_bash_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_bundle_size))
 
     sort_big_bash_file = open(swarm_files_path + "/" + sort_big_bash_fname, 'w')
 
@@ -922,6 +932,7 @@ if sort_big_bash_list != []:
 if sort_big_bash_large_list != []:
 
     print("sessions in sort_big_bash_large_list: " + str(len(sort_big_bash_large_list)))
+    print("                              : " + str(big_bash_large_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_large_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_large_bundle_size))
 
     sort_big_bash_large_file = open(swarm_files_path + "/" + sort_big_bash_large_fname, 'w')
 
@@ -935,6 +946,7 @@ if sort_big_bash_large_list != []:
 if sort_big_bash_xlarge_list != []:
 
     print("sessions in sort_big_bash_xlarge_list: " + str(len(sort_big_bash_xlarge_list)))
+    print("                              : " + str(big_bash_xlarge_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_xlarge_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_xlarge_bundle_size))
 
     sort_big_bash_xlarge_file = open(swarm_files_path + "/" + sort_big_bash_xlarge_fname, 'w')
 
