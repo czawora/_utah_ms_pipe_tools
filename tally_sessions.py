@@ -118,64 +118,67 @@ for idx, sess in enumerate(sess_list):
 
     sess_path = sess + "/spike"
 
-    ignore_status = ignore_stats[idx]
-    outputs_status = outputs_stats[idx]
-    spikeInfo_status = spikeInfo_stats[idx]
-    spikeWaveform_status = spikeWaveform_stats[idx]
-    sortSummary_status = sortSummary_stats[idx]
-    sortFigs_status = sortFigs_stats[idx]
-    traceFigs_status = traceFigs_stats[idx]
-    splits_chan_status = splits_chan_stats[idx]
-    splits_done_status = splits_done_stats[idx]
+    # there might be an info file, but no ns5 or ns6 and therefore no spike dir
+    if os.path.isdir(sess_path):
 
-    # completed session should be
-    # ignore = 1
-    # OR
-    # ignore = 0
-    # outputs = 1
-    # spikeInfo = 1
-    # spikeWaveform = 1
-    # sortSummary = 1
-    # sortFigs = not easily indicative
-    # traceFigs = not easily indicative
-    # splits_chan == splits_done
+        ignore_status = ignore_stats[idx]
+        outputs_status = outputs_stats[idx]
+        spikeInfo_status = spikeInfo_stats[idx]
+        spikeWaveform_status = spikeWaveform_stats[idx]
+        sortSummary_status = sortSummary_stats[idx]
+        sortFigs_status = sortFigs_stats[idx]
+        traceFigs_status = traceFigs_stats[idx]
+        splits_chan_status = splits_chan_stats[idx]
+        splits_done_status = splits_done_stats[idx]
 
-    if ignore_status != 0:
+        # completed session should be
+        # ignore = 1
+        # OR
+        # ignore = 0
+        # outputs = 1
+        # spikeInfo = 1
+        # spikeWaveform = 1
+        # sortSummary = 1
+        # sortFigs = not easily indicative
+        # traceFigs = not easily indicative
+        # splits_chan == splits_done
 
-        current_ignore_string = ""
-        for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
+        if ignore_status != 0:
 
-            ignore_fname = ignore_fpath.split("/")[-1]
-            ignore_file = open(ignore_fpath)
-            ignore_lines = [l.strip("\n") for l in ignore_file]
-            ignore_file.close()
+            current_ignore_string = ""
+            for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
 
-            current_ignore_string += " " + sess.split("/")[-1] + " : " + ignore_fname + " -- " + " ".join(ignore_lines)
+                ignore_fname = ignore_fpath.split("/")[-1]
+                ignore_file = open(ignore_fpath)
+                ignore_lines = [l.strip("\n") for l in ignore_file]
+                ignore_file.close()
 
-        ignore_strings.append(current_ignore_string)
+                current_ignore_string += " " + sess.split("/")[-1] + " : " + ignore_fname + " -- " + " ".join(ignore_lines)
 
-    elif not (ignore_status == 0 and outputs_status == 1 and spikeInfo_status == 1 and spikeWaveform_status == 1 and sortSummary_status == 1 and splits_chan_status == splits_done_status and (splits_chan_status > 64 or splits_chan_status == 0)):
+            ignore_strings.append(current_ignore_string)
 
-        incomp_str = sess.split("/")[-1]
-        incomp_str += " -- ignore: " + str(ignore_status)
-        incomp_str += " -- outputs: " + str(outputs_status)
-        incomp_str += " -- spikeInfo: " + str(spikeInfo_status)
-        incomp_str += " -- spikeWaveform: " + str(spikeWaveform_status)
-        incomp_str += " -- sortSummary: " + str(sortSummary_status)
-        incomp_str += " -- split_chan: " + str(splits_chan_status)
-        incomp_str += " -- done_chan: " + str(splits_done_status)
+        elif not (ignore_status == 0 and outputs_status == 1 and spikeInfo_status == 1 and spikeWaveform_status == 1 and sortSummary_status == 1 and splits_chan_status == splits_done_status and (splits_chan_status > 64 or splits_chan_status == 0)):
 
-        incomplete_strings.append(incomp_str)
+            incomp_str = sess.split("/")[-1]
+            incomp_str += " -- ignore: " + str(ignore_status)
+            incomp_str += " -- outputs: " + str(outputs_status)
+            incomp_str += " -- spikeInfo: " + str(spikeInfo_status)
+            incomp_str += " -- spikeWaveform: " + str(spikeWaveform_status)
+            incomp_str += " -- sortSummary: " + str(sortSummary_status)
+            incomp_str += " -- split_chan: " + str(splits_chan_status)
+            incomp_str += " -- done_chan: " + str(splits_done_status)
 
-        if splits_chan_status == splits_done_status and splits_chan_status > 64:
-            incomplete_outputs.append(incomp_str)
-            incomplete_outputs_sess.append(sess)
+            incomplete_strings.append(incomp_str)
+
+            if splits_chan_status == splits_done_status and splits_chan_status > 64:
+                incomplete_outputs.append(incomp_str)
+                incomplete_outputs_sess.append(sess)
+            else:
+                incomplete_chans.append(incomp_str)
+                incomplete_chans_sess.append(sess.split("/")[-1])
         else:
-            incomplete_chans.append(incomp_str)
-            incomplete_chans_sess.append(sess.split("/")[-1])
-    else:
 
-        complete_strings.append(sess.split("/")[-1])
+            complete_strings.append(sess.split("/")[-1])
 
 
 def split_incomplete_string(s):
