@@ -53,62 +53,65 @@ for idx, sess in enumerate(sess_list):
     sess_path_outputs = sess_path + "/outputs"
     sess_path_splits = sess_path + "/splits"
 
-    total_count += 1
+    # there might be an info file, but no ns5 or ns6 and therefore no spike dir
+    if os.path.isdir(sess_path):
 
-    ignore_status = 0
-    outputs_status = 0
-    spikeInfo_status = 0
-    spikeWaveform_status = 0
-    sortSummary_status = 0
-    sortFigs_status = 0
-    traceFigs_status = 0
-    splits_chan_status = 0
-    splits_done_status = 0
+        total_count += 1
 
-    # is there a ignore_me.txt in this session
-    if glob.glob(sess_path + "/_ignore_me*") != []:
+        ignore_status = 0
+        outputs_status = 0
+        spikeInfo_status = 0
+        spikeWaveform_status = 0
+        sortSummary_status = 0
+        sortFigs_status = 0
+        traceFigs_status = 0
+        splits_chan_status = 0
+        splits_done_status = 0
 
-        ignore_status = len(glob.glob(sess_path + "/_ignore_me*"))
+        # is there a ignore_me.txt in this session
+        if glob.glob(sess_path + "/_ignore_me*") != []:
 
-    if os.path.isdir(sess_path_outputs):
+            ignore_status = len(glob.glob(sess_path + "/_ignore_me*"))
 
-        outputs_status = 1
+        if os.path.isdir(sess_path_outputs):
 
-        spikeInfo_glob = glob.glob(sess_path + "/outputs/*spikeInfo.mat")
-        spikeWaveform_glob = glob.glob(sess_path + "/outputs/*spikeWaveform.mat")
-        sortSummary_glob = glob.glob(sess_path + "/outputs/*sortSummary.csv")
+            outputs_status = 1
 
-        if spikeInfo_glob != []:
-            spikeInfo_status = 1
-        if spikeWaveform_glob != []:
-            spikeWaveform_status = 1
-        if sortSummary_glob != []:
-            sortSummary_status = 1
+            spikeInfo_glob = glob.glob(sess_path + "/outputs/*spikeInfo.mat")
+            spikeWaveform_glob = glob.glob(sess_path + "/outputs/*spikeWaveform.mat")
+            sortSummary_glob = glob.glob(sess_path + "/outputs/*sortSummary.csv")
 
-        if os.path.isdir(sess_path + "/outputs/sortFigs"):
+            if spikeInfo_glob != []:
+                spikeInfo_status = 1
+            if spikeWaveform_glob != []:
+                spikeWaveform_status = 1
+            if sortSummary_glob != []:
+                sortSummary_status = 1
 
-            sortFigs_glob = glob.glob(sess_path + "/outputs/sortFigs/*")
-            sortFigs_status = len(sortFigs_glob)
+            if os.path.isdir(sess_path + "/outputs/sortFigs"):
 
-        if os.path.isdir(sess_path + "/outputs/traceFigs"):
+                sortFigs_glob = glob.glob(sess_path + "/outputs/sortFigs/*")
+                sortFigs_status = len(sortFigs_glob)
 
-            traceFigs_glob = glob.glob(sess_path + "/outputs/traceFigs/*")
-            traceFigs_status = len(traceFigs_glob)
+            if os.path.isdir(sess_path + "/outputs/traceFigs"):
 
-    if os.path.isdir(sess_path_splits):
+                traceFigs_glob = glob.glob(sess_path + "/outputs/traceFigs/*")
+                traceFigs_status = len(traceFigs_glob)
 
-        splits_chan_status = len(glob.glob(sess_path_splits + "/*/*mda_chan"))
-        splits_done_status = len(glob.glob(sess_path_splits + "/*/done.log"))
+        if os.path.isdir(sess_path_splits):
 
-    ignore_stats.append(ignore_status)
-    outputs_stats.append(outputs_status)
-    spikeInfo_stats.append(spikeInfo_status)
-    spikeWaveform_stats.append(spikeWaveform_status)
-    sortSummary_stats.append(sortSummary_status)
-    sortFigs_stats.append(sortFigs_status)
-    traceFigs_stats.append(traceFigs_status)
-    splits_chan_stats.append(splits_chan_status)
-    splits_done_stats.append(splits_done_status)
+            splits_chan_status = len(glob.glob(sess_path_splits + "/*/*mda_chan"))
+            splits_done_status = len(glob.glob(sess_path_splits + "/*/done.log"))
+
+        ignore_stats.append(ignore_status)
+        outputs_stats.append(outputs_status)
+        spikeInfo_stats.append(spikeInfo_status)
+        spikeWaveform_stats.append(spikeWaveform_status)
+        sortSummary_stats.append(sortSummary_status)
+        sortFigs_stats.append(sortFigs_status)
+        traceFigs_stats.append(traceFigs_status)
+        splits_chan_stats.append(splits_chan_status)
+        splits_done_stats.append(splits_done_status)
 
 
 for idx, sess in enumerate(sess_list):
