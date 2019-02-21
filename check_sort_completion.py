@@ -78,7 +78,7 @@ for t in target_strings:
 
 if len(present_targets) == len(target_strings):
 
-	print("all done")
+	print("check_sort_completion - all done")
 	f = open(chan_dir + "/done.log", 'w')
 	f.close()
 
