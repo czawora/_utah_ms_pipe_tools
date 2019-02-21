@@ -269,7 +269,7 @@ for sess in subj_path_files:
                     sub_cmd.append(str(iRefset))
                     sub_cmd.append("elementInfo_filename")
                     sub_cmd.append(session_elementInfo_fpath)
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                    sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                     sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -364,7 +364,7 @@ for sess in subj_path_files:
                     sub_cmd.append("--freq_min=600")
                     sub_cmd.append("--freq_max=6000")
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                    sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                     sub_cmd_file.write("for i in `seq 1 5`;\n")
                     sub_cmd_file.write("do\n")
@@ -455,7 +455,7 @@ for sess in subj_path_files:
                     sub_cmd.append(str(iRefset))
                     sub_cmd.append("$used_chans_fpath")
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                    sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                     sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -543,7 +543,7 @@ for sess in subj_path_files:
                     sub_cmd.append("--timeseries=${whiten_input}")
                     sub_cmd.append("--timeseries_out=${whiten_output_mda}")
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                    sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                     sub_cmd_file.write("for i in `seq 1 5`;\n")
                     sub_cmd_file.write("do\n")
@@ -641,7 +641,7 @@ for sess in subj_path_files:
                     sub_cmd.append("refset")
                     sub_cmd.append(str(iRefset))
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                    sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                     sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -805,7 +805,7 @@ for sess in subj_path_files:
                         sub_cmd.append("elementInfo_fpath")
                         sub_cmd.append(session_elementInfo_fpath)
 
-                        sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+                        sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
                         sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
