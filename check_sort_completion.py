@@ -115,7 +115,9 @@ if len(present_targets) == len(target_strings):
 
 	done_files = glob.glob(split_dir + "/*/done.log")
 
-	print(done_files)
+	for d in done_files:
+		print(d)
+		
 	print(len(done_files))
 	if num_used_chans == len(done_files):
 
