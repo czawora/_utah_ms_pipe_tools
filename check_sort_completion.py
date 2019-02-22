@@ -115,7 +115,8 @@ if len(present_targets) == len(target_strings):
 
 	done_files = glob.glob(split_dir + "/*/done.log")
 
-	for d in done_files.sort():
+	done_files.sort()
+	for d in done_files:
 		print(d)
 
 	print(len(done_files))
