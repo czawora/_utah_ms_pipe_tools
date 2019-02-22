@@ -883,9 +883,9 @@ sort_swarm_fname = "sort_%s_swarm.sh" % output_suffix
 
 swarm_cpu_count = 10
 
-sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
 
 # make subj_path/run_files if it doesnt exist, bash scripts go in there
 swarm_files_path = subj_path + "/_swarms"
