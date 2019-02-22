@@ -158,6 +158,11 @@ for sess in subj_path_files:
                 ns3_glob = glob.glob(subj_path + "/" + sess + "/*." + analog_pulse_ext)
                 nev_glob = glob.glob(subj_path + "/" + sess + "/*.nev")
 
+                # remove old log files
+                log_glob = glob.glob(subj_path + "/" + sess + "/*.log")
+                for log in log_glob:
+                    os.remove(log)
+
                 for iRefset in range(1, session_elementInfo_refsets + 1):
 
                     print(bash_fname)
