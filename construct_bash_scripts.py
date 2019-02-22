@@ -740,7 +740,7 @@ for sess in subj_path_files:
                         # write the sbatch header for sub_cmd bash file
                         sbatch_header = []
                         sbatch_header.append("#!/bin/bash")
-                        sbatch_header.append("#SBATCH --mem=10g")
+                        sbatch_header.append("#SBATCH --mem=30g")
                         sbatch_header.append("#SBATCH --cpus-per-task=1")
                         sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
                         sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)

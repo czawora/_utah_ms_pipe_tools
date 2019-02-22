@@ -117,7 +117,7 @@ if len(present_targets) == len(target_strings):
 
 	for d in done_files:
 		print(d)
-		
+
 	print(len(done_files))
 	if num_used_chans == len(done_files):
 
