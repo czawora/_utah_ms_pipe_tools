@@ -130,7 +130,7 @@ if len(present_targets) == len(target_strings):
 			spikeInfo_log.write(used_chans[idx] + "\t" + done_files[idx] + "\n")
 		spikeInfo_log.close()
 
-		# call(["sbatch", session_spike_dir + "/spikeInfo.sh"])
+		call(["sbatch", session_spike_dir + "/spikeInfo.sh"])
 
 
 else:
