@@ -179,6 +179,7 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("################################\n")
 
 	# timing
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + time_log_fpath + "\n")
 	sub_cmd_file.write("start_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":start_msAlg:$start_time\" >> " + time_log_fpath + "\n\n")
 
