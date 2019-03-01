@@ -866,8 +866,8 @@ for sess in subj_path_files:
                 ###################################################################################################
                 ###################################################################################################
 
-sort_big_bash_list += sort_big_bash_large_list
-sort_big_bash_large_list = []
+sort_big_bash_large_list += sort_big_bash_xlarge_list
+sort_big_bash_xlarge_list = []
 
 user_cpu_limit = 500
 total_big_bash_num = len(sort_big_bash_list + sort_big_bash_large_list + sort_big_bash_xlarge_list)
