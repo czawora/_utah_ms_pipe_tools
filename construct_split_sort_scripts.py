@@ -44,7 +44,7 @@ if os.path.isdir(session_dir + "/log_dump") is False:
 	os.mkdir(session_dir + "/log_dump")
 
 session_swarm = open(session_dir + "/sort_swarm%s.sh" % refset, 'w')
-session_swarm.write("swarm -g 30 -b 1 -t 2 --partition norm --gres=lscratch:15 --time 2:00:00 -J " + job_name + " --merge-output --logdir " + session_dir + "/log_dump -f " + session_dir + "/sort_big_bash%s.sh" % refset)
+session_swarm.write("swarm -g 30 -b 1 -t 2 --partition norm --gres=lscratch:15 --time 1:00:00 -J " + job_name + " --merge-output --logdir " + session_dir + "/log_dump -f " + session_dir + "/sort_big_bash%s.sh" % refset)
 session_swarm.close()
 
 session_big_bash = open(session_dir + "/sort_big_bash%s.sh" % refset, 'w')
