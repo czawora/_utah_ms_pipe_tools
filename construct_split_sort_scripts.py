@@ -324,7 +324,8 @@ for mda_fpath in split_mda:
 
 	# make command
 	sub_cmd_feats = []
-	sub_cmd_feats.append("cd " + plotChannelSpikes_matlab_dir + "/_plotChannelSpikes; ./run_plotChannelSpikes_swarm.sh /usr/local/matlab-compiler/v94")
+	sub_cmd_feats.append("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz")
+	sub_cmd_feats.append("cd " + plotChannelSpikes_matlab_dir + "/_plotChannelSpikes; ./run_plotChannelSpikes_swarm.sh /lscratch/$SLURM_JOB_ID/v94")
 	sub_cmd_feats.append("session_name")
 	sub_cmd_feats.append(session_name)
 	sub_cmd_feats.append("channel_num")
