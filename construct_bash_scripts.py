@@ -261,6 +261,8 @@ for sess in subj_path_files:
                     sub_cmd_file.write("echo \"start nsx2mda\"\n")
                     sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
+                    sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz")
+
                     # convert to mda format
                     matlab_command = "cd " + nsx2mda_matlab_dir + "/_nsx2mda; ./run_nsx2mda_swarm.sh " + matlab_compiler_ver_str
 
@@ -451,6 +453,8 @@ for sess in subj_path_files:
                     sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
                     sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
 
+                    sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz")
+
                     matlab_command = "cd " + globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + matlab_compiler_ver_str
 
                     sub_cmd = []
@@ -633,6 +637,7 @@ for sess in subj_path_files:
                     sub_cmd_file.write("mkdir " + split_dir + "\n")
                     sub_cmd_file.write("fi\n")
 
+                    sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz")
                     matlab_command = "cd " + splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + matlab_compiler_ver_str
 
                     sub_cmd = []
@@ -770,6 +775,7 @@ for sess in subj_path_files:
 
                         sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
+                        sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz")
                         matlab_command = "cd " + construct_spikeInfoMS_matlab_dir + "/_construct_spikeInfoMS; ./run_construct_spikeInfoMS_swarm.sh " + matlab_compiler_ver_str
 
                         sub_cmd = []
