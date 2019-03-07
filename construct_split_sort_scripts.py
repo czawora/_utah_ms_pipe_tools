@@ -22,7 +22,7 @@ from paths import *
 sbatch_header = []
 sbatch_header.append("#!/bin/bash")
 sbatch_header.append("#SBATCH --cpus-per-task=5")
-sbatch_header.append("#SBATCH --gres=lscratch:1")
+sbatch_header.append("#SBATCH --gres=lscratch:15")
 sbatch_header.append("#SBATCH --error=/dev/null")
 sbatch_header.append("#SBATCH --output=/dev/null")
 

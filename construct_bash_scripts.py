@@ -193,7 +193,7 @@ for sess in subj_path_files:
                     sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
                     sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
                     sbatch_header.append("#SBATCH --time=10:00:00")
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+                    sbatch_header.append("#SBATCH --gres=lscratch:15")
 
                     for l in sbatch_header:
                         sort_sbatch_file.write(l + "\n")
@@ -251,7 +251,7 @@ for sess in subj_path_files:
                     sbatch_header.append("#SBATCH --cpus-per-task=2")
                     sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
                     sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+                    sbatch_header.append("#SBATCH --gres=lscratch:15")
 
                     for l in sbatch_header:
                         sub_cmd_file.write(l + "\n")
@@ -436,7 +436,7 @@ for sess in subj_path_files:
                     sbatch_header.append("#SBATCH --cpus-per-task=10")
                     sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
                     sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+                    sbatch_header.append("#SBATCH --gres=lscratch:15")
 
                     for l in sbatch_header:
                         sub_cmd_file.write(l + "\n")
@@ -619,7 +619,7 @@ for sess in subj_path_files:
                     sbatch_header.append("#SBATCH --cpus-per-task=10")
                     sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
                     sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+                    sbatch_header.append("#SBATCH --gres=lscratch:15")
 
                     for l in sbatch_header:
                         sub_cmd_file.write(l + "\n")
@@ -761,7 +761,7 @@ for sess in subj_path_files:
                         sub_cmd_file.write("#SBATCH --job-name=" + job_name + "\n")
                         sub_cmd_file.write("#SBATCH --dependency=singleton\n")
                         sub_cmd_file.write("#SBATCH --time=48:00:00\n")
-                        sub_cmd_file.write("#SBATCH --gres=lscratch:1\n")
+                        sub_cmd_file.write("#SBATCH --gres=lscratch:15\n")
 
                         sub_cmd_file.write("\n\n")
 
@@ -889,9 +889,9 @@ sort_swarm_fname = "sort_%s_swarm.sh" % output_suffix
 
 swarm_cpu_count = 10
 
-sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:1 --merge-output --logdir "
+sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 10:00:00 --gres=lscratch:15 --merge-output --logdir "
+sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:15 --merge-output --logdir "
+sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 10:00:00 --gres=lscratch:15 --merge-output --logdir "
 
 # make subj_path/run_files if it doesnt exist, bash scripts go in there
 swarm_files_path = subj_path + "/_swarms"
