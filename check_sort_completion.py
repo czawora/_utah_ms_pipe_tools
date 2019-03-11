@@ -12,7 +12,7 @@ target_strings.append(("isol_metrics", "Process completed successfully: ms3.isol
 target_strings.append(("clips", "Process completed successfully: ms3.mv_extract_clips", ["clips.mda"] ))
 target_strings.append(("metrics", "Process completed successfully: ms3.cluster_metrics", ["metrics.json"] ))
 target_strings.append(("clip_features", "Process completed successfully: ms3.mv_extract_clips_features", ["clip_features.mda"] ))
-target_strings.append(("plot", "plotChannelSpikes -- done", []))
+# target_strings.append(("plot", "plotChannelSpikes -- done", []))
 
 present_targets = []
 missing_targets = []
