@@ -5,7 +5,6 @@ import time
 import argparse
 import math
 import sys
-import re
 import shutil
 import pandas as pd
 import paths
