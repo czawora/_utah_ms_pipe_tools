@@ -7,6 +7,17 @@ import math
 import sys
 import shutil
 import pandas as pd
+
+# directory setup
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+
+sys.path.append(dname)
+
+if os.path.isfile(dname + "/paths.py") is False:
+	print("move a copy of paths.py into this folder: " + dname)
+	exit(2)
+
 import paths
 
 #########################################################################
@@ -970,16 +981,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 
 if __name__ == "__main__":
-
-	# directory setup
-	abspath = os.path.abspath(__file__)
-	dname = os.path.dirname(abspath)
-
-	sys.path.append(dname)
-
-	if os.path.isfile(dname + "/paths.py") is False:
-		print("move a copy of paths.py into this folder: " + dname)
-		exit(2)
 
 	# parse args
 	parser = argparse.ArgumentParser(description='create bash files for spike sorting and lfp extraction')
