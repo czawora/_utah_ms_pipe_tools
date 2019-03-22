@@ -627,11 +627,16 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 	jacksheet_nsp_micro = jacksheet.loc[(jacksheet["NSPsuffix"] == nsp_suffix) & (jacksheet["MicroDevNum"] >= 1)]
 	jacksheet_unique_dev_num = jacksheet_nsp_micro.MicroDevNum.unique().tolist()
 
-	# wipe away some old files
 	if os.path.isdir(session_dir) is False:
 		os.mkdir(session_dir)
 
+	# delete existing split files
+	if delete_splits and os.path.isdir(session_dir + "/splits"):
+		print(" ... removing old split/ dir", end="")
+		shutil.rmtree(session_dir + "/splits")
+
 	for log_file in glob.glob(session_dir + "/*.log"):
+		print(" ... removing old split/ dir", end="")
 		os.remove(log_file)
 
 	command_tuple_list = []
@@ -657,10 +662,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 			command_tuple_list.append(("xlarge", refset_bash_command))
-
-		# delete existing split files
-		if delete_splits and os.path.isdir(session_dir + "/splits"):
-			shutil.rmtree(session_dir + "/splits")
 
 		time_log_fpath = session_dir + "/time.log"
 		sort_sbatch_file = open(session_dir + "/" + current_bash_fname, 'w')
@@ -1024,6 +1025,7 @@ if __name__ == "__main__":
 
 	for sess in subj_path_files:
 
+		print("")
 		print("looking at session " + sess, end="")
 
 		if os.path.isdir(subj_path + "/" + sess) is True:
@@ -1055,7 +1057,7 @@ if __name__ == "__main__":
 				# there is a nsx file, a jacksheet, and an info file. good to go
 				if session_nsx_glob != []:
 
-					print(" ... has an nsx file! zoom!")
+					print(" ... has an nsx file! zoom!", end="")
 
 					session_nsx_fpath = session_nsx_glob[0]
 
