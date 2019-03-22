@@ -1077,6 +1077,7 @@ if __name__ == "__main__":
 						elif size_cat == "xlarge":
 							sort_big_bash_xlarge_list.append(bash_command)
 
+	print("")
 	############################################################################################
 
 	sort_big_bash_list += sort_big_bash_large_list
