@@ -7,1313 +7,1168 @@ import math
 import sys
 import re
 import shutil
-import csv
+import pandas as pd
+import paths
 
 #########################################################################
-#########################################################################
-#########################################################################
-
-datestring_regex_old = re.compile(r'.*(\d\d\d\d\d\d_\d\d\d\d).*')
-datestring_regex_new = re.compile(r'.*(\d\d\d\d\d\d\d\d-\d\d\d\d\d\d).*')
-
-
-abspath = os.path.abspath(__file__)
-dname = os.path.dirname(abspath)
-
-sys.path.append(dname)
-
-if os.path.isfile(dname + "/paths.py") is False:
-    print("move a copy of paths.py into this folder: " + dname)
-    exit(2)
-
-from paths import *
-
-
-bash_fname = "sort_run_all%s.sh"
-bash_log_fname = "_sort_run_all%s.log"
-
-#########################################################################
-#########################################################################
+# START FUNCTIONS #######################################################
 #########################################################################
 
-parser = argparse.ArgumentParser(description='create bash files for spike sorting and lfp extraction')
 
-parser.add_argument('subj_path')
-parser.add_argument('--sesslist', default = "")
-parser.add_argument('--output_suffix', default = "initial")
-parser.add_argument('--keep_splits', action='store_false')
+def write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset):
 
-args = parser.parse_args()
+	sub_cmd_fname = "nsx2mda%s.sh" % str(refset)
+	sub_cmd_log_fname = "_nsx2mda%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-subj_path = args.subj_path
-sesslist_fname = args.sesslist
-output_suffix = args.output_suffix
-delete_splits = args.keep_splits
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=2")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-timestamp = time.strftime("%d_%m_%Y--%H_%M_%S")
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-log_files = []
+	sub_cmd_file.write("\n\n")
 
-if sesslist_fname != "":
+	sub_cmd_file.write("echo \"start nsx2mda\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-    sesslist = open(sesslist_fname)
-    subj_path_files = [l.strip("\n") for l in sesslist]
-    sesslist.close()
+	# convert to mda format
+	matlab_command = "cd " + paths.nsx2mda_matlab_dir + "/_nsx2mda; ./run_nsx2mda_swarm.sh " + paths.matlab_compiler_ver_str
 
-else:
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("nsx_fpath")
+	sub_cmd.append(nsx_fpath)
+	sub_cmd.append("refset")
+	sub_cmd.append(str(refset))
+	sub_cmd.append("jacksheet_fpath")
+	sub_cmd.append(jacksheet_fpath)
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-    subj_path_files = os.listdir(subj_path)
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-subj_path_files.sort()
+	sub_cmd_file.write("echo \"end nsx2mda\"\n")
 
-print("sessions: " + str(len(subj_path_files)))
+	sub_cmd_file.close()
 
-# gather all session bash lines in list
-sort_big_bash_list = []
-sort_big_bash_large_list = []
-sort_big_bash_xlarge_list = []
+	return(sub_cmd_fpath)
 
-session_count = 0
 
-for sess in subj_path_files:
+def write_bandpass_raw(session_dir, refset):
 
-    print(sess)
-    # if the sess is raw blackrock file string, need to change it
-    if re.match(datestring_regex_new, sess) is not None:
+	sub_cmd_fname = "bandpass_raw%s.sh" % str(refset)
+	sub_cmd_log_fname = "_bandpass_raw%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-        datestring_match = re.findall(datestring_regex_new, sess)[0]
-        #print("found datestring match: " + datestring_match)
-        datestring_match_splitter = datestring_match
-        #print("split on datestring match: " + str(sess.split(datestring_match_splitter)))
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
 
-        output_subj_str = sess.split(datestring_match_splitter)[0].strip("_")
-        output_ymd_hms_str = datestring_match[2:len(datestring_match)-2].replace('-', "_")
-        output_nsp_str = sess.split(datestring_match_splitter)[1]
+	# write the sbatch header for sub_cmd bash file
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-        if output_nsp_str[0] == "-":
-            output_nsp_str = output_nsp_str[1:]
+	sub_cmd_file.write("\n\n")
 
-    elif re.match(datestring_regex_old, sess) is not None:
+	sub_cmd_file.write("source " + paths.MS_env_source + "\n\n")
 
-        datestring_match = re.findall(datestring_regex_old, sess)[0]
-        print("found datestring match: " + datestring_match)
-        datestring_match_splitter = datestring_match
-        print("split on datestring match: " + str(sess.split(datestring_match_splitter)))
+	sub_cmd_file.write("echo \"start bandpass_raw\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-        output_subj_str = sess.split(datestring_match_splitter)[0].strip("_")
-        output_ymd_hms_str = datestring_match
-        output_nsp_str = sess.split(datestring_match_splitter)[1]
+	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_raw_bp\n\n")
 
-        if output_nsp_str[0] == "_":
-            output_nsp_str = output_nsp_str[1:]
+	sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
+	sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
 
-    print("looking at session " + sess + " ymd_hms --> " + output_ymd_hms_str)
+	sub_cmd_file.write("if [ -f $bandpass_output_mda  ]\n")
+	sub_cmd_file.write("then\n")
+	sub_cmd_file.write("\trm $bandpass_output_mda \n")
+	sub_cmd_file.write("fi\n\n")
 
-    if os.path.isdir(subj_path + "/" + sess) is True:
+	sub_cmd = []
+	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
+	sub_cmd.append("ms3.bandpass_filter")
+	sub_cmd.append("--timeseries=${bandpass_input_nsx}")
+	sub_cmd.append("--timeseries_out=${bandpass_output_mda}")
+	sub_cmd.append("--samplerate=30000")
+	sub_cmd.append("--freq_min=1")
+	sub_cmd.append("--freq_max=5000")
 
-        print(subj_path + "/" + sess + " is a directory")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-        # read the session info file, if there is one
-        session_info_glob = glob.glob(subj_path + "/" + sess + "/*_info.txt")
-        session_elementInfo_glob = glob.glob(subj_path + "/" + sess + "/*_elementInfo.txt")
+	sub_cmd_file.write("for i in `seq 1 5`;\n")
+	sub_cmd_file.write("do\n")
+	sub_cmd_file.write("if [ ! -f ${bandpass_output_mda} ]; then\n")
 
-        if session_info_glob != [] and session_elementInfo_glob != []:
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-            session_elementInfo_fpath = session_elementInfo_glob[0]
+	sub_cmd_file.write("fi\n")
+	sub_cmd_file.write("done\n")
 
-            session_elementInfo_file = open(session_elementInfo_fpath)
-            session_elementInfo_filecsv = csv.reader(session_elementInfo_file, delimiter=',', quotechar='"')
-            session_elementInfo = [l for l in session_elementInfo_filecsv]
-            session_elementInfo_file.close()
+	sub_cmd_file.write("echo \"end bandpass_raw\"\n")
 
-            # get number of refsets
-            session_elementInfo_refsets = len(session_elementInfo)
-            print("num refsets: " + str(session_elementInfo_refsets))
+	sub_cmd_file.close()
 
-            session_info_file = open(session_info_glob[0])
-            session_info = [l.strip("\n") for l in session_info_file]
-            session_info_file.close()
+	return(sub_cmd_fpath)
 
-            analog_pulse_ext = session_info[0]
-            nsx_ext = session_info[1]
 
-            # find the nsx file in this session
-            g = glob.glob(subj_path + "/" + sess + "/*." + nsx_ext)
+def write_bandpass_spike(session_dir, refset):
 
-            if g != []:
+	sub_cmd_fname = "bandpass_spike%s.sh" % str(refset)
+	sub_cmd_log_fname = "_bandpass_spike%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                session_count = session_count + 1
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
 
-                session_dir = subj_path + "/" + sess + "/spike"
-                if os.path.isdir(session_dir) is False:
-                    os.mkdir(session_dir)
+	# write the sbatch header for sub_cmd bash file
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                job_name = "FRNU--" + timestamp + "--" + sess
+	sub_cmd_file.write("\n\n")
 
-                nsx_file = g[0]
-                nsx_filesize = os.path.getsize(nsx_file)
+	sub_cmd_file.write("source " + paths.MS_env_source + "\n\n")
 
-                nsx_fname = nsx_file.split("/")[-1]
+	sub_cmd_file.write("echo \"start bandpass_spike\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                ns3_glob = glob.glob(subj_path + "/" + sess + "/*." + analog_pulse_ext)
-                nev_glob = glob.glob(subj_path + "/" + sess + "/*.nev")
+	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_spike_bp\n\n")
 
-                for iRefset in range(1, session_elementInfo_refsets + 1):
+	sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
+	sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
 
-                    print(bash_fname)
+	sub_cmd_file.write("if [ -f $bandpass_output_mda  ]\n")
+	sub_cmd_file.write("then\n")
+	sub_cmd_file.write("\trm $bandpass_output_mda \n")
+	sub_cmd_file.write("fi\n\n")
 
-                    current_bash_fname = bash_fname % str(iRefset)
-                    current_bash_log_fname = bash_log_fname % str(iRefset)
+	sub_cmd = []
+	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
+	sub_cmd.append("ms3.bandpass_filter")
+	sub_cmd.append("--timeseries=${bandpass_input_nsx}")
+	sub_cmd.append("--timeseries_out=${bandpass_output_mda}")
+	sub_cmd.append("--samplerate=30000")
+	sub_cmd.append("--freq_min=600")
+	sub_cmd.append("--freq_max=6000")
 
-                    print(current_bash_fname)
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    if nsx_filesize/1e9 < 25:
-                        sort_big_bash_list.append("bash " + session_dir + "/" + current_bash_fname + "\n")
-                    elif nsx_filesize/1e9 < 40:
-                        sort_big_bash_large_list.append("bash " + session_dir + "/" + current_bash_fname + "\n")
-                    else:
-                        sort_big_bash_xlarge_list.append("bash " + session_dir + "/" + current_bash_fname + "\n")
+	sub_cmd_file.write("for i in `seq 1 5`;\n")
+	sub_cmd_file.write("do\n")
+	sub_cmd_file.write("if [ ! -f ${bandpass_output_mda} ]; then\n")
 
-                    if delete_splits and os.path.isdir(session_dir + "/splits"):
-                        shutil.rmtree(session_dir + "/splits")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    time_log_fpath = session_dir + "/time.log"
-                    sort_sbatch_file = open(session_dir + "/" + current_bash_fname, 'w')
+	sub_cmd_file.write("fi\n")
+	sub_cmd_file.write("done\n")
 
-                    # write the sbatch header for combo bash file
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=200g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=5")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
-                    sbatch_header.append("#SBATCH --time=10:00:00")
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sub_cmd_file.write("echo \"end bandpass_spike\"\n")
 
-                    for l in sbatch_header:
-                        sort_sbatch_file.write(l + "\n")
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n\n" % str(refset))
 
-                    sort_sbatch_file.write("\n\n")
+	sub_cmd_file.close()
 
-                    # remove an existing _ignore_me.txt
-                    sort_sbatch_file.write("if [ -f " + session_dir + "/_ignore_me%s.txt ]; then\n" % str(iRefset))
-                    sort_sbatch_file.write("rm " + session_dir + "/_ignore_me%s.txt\n" % str(iRefset))
-                    sort_sbatch_file.write("fi\n\n")
+	return(sub_cmd_fpath)
 
-                    #################################
-                    #################################
-                    # load MS env
-                    #################################
 
-                    sort_sbatch_file.write("export done_time\n\n")
+def write_reref_raw(session_dir, refset):
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#load ms env\n")
-                    sort_sbatch_file.write("################################\n")
+	sub_cmd_fname = "reref_raw%s.sh" % str(refset)
+	sub_cmd_log_fname = "_reref_raw%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sort_sbatch_file.write("echo -n \"" + sess + ":start_loadEnv:\" > " + time_log_fpath + "; ")
-                    sort_sbatch_file.write("date +%s >> " + time_log_fpath + "\n\n")
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    sort_sbatch_file.write("source " + MS_env_source + "\n\n")
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_loadEnv:$done_time\" >> " + time_log_fpath + ";\n\n")
+	sub_cmd_file.write("\n\n")
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+	sub_cmd_file.write("echo \"start reref_raw\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: convert2mda
-                    #################################
+	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
+	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
 
-                    sub_cmd_fname = "nsx2mda%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_nsx2mda%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+	matlab_command = "cd " + paths.globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    # write the sbatch header for sub_cmd bash file
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("$bandpass_input_mda")
+	sub_cmd.append("$reref_output_mda")
+	sub_cmd.append(str(refset))
+	sub_cmd.append("$used_chans_fpath")
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=2")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sub_cmd_file.write("\n\n")
+	sub_cmd_file.write("echo \"end reref_raw\"\n")
 
-                    sub_cmd_file.write("echo \"start nsx2mda\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n\n" % str(refset))
 
-                    # convert to mda format
-                    matlab_command = "cd " + nsx2mda_matlab_dir + "/_nsx2mda; ./run_nsx2mda_swarm.sh " + matlab_compiler_ver_str
+	sub_cmd_file.close()
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("input_filename")
-                    sub_cmd.append(nsx_file)
-                    sub_cmd.append("output_dir")
-                    sub_cmd.append(session_dir)
-                    sub_cmd.append("refset")
-                    sub_cmd.append(str(iRefset))
-                    sub_cmd.append("elementInfo_filename")
-                    sub_cmd.append(session_elementInfo_fpath)
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	return(sub_cmd_fpath)
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sub_cmd_file.write("echo \"end nsx2mda\"\n")
+def write_reref_spike(session_dir, refset):
 
-                    sub_cmd_file.close()
+	sub_cmd_fname = "reref_spike%s.sh" % str(refset)
+	sub_cmd_log_fname = "_reref_spike%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#nsx2mda\n")
-                    sort_sbatch_file.write("################################\n")
+	sub_cmd_file.write("\n\n")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#nsx2mda\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	sub_cmd_file.write("echo \"start reref_spike\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_nsx2mda:$start_time\" >> " + time_log_fpath + ";\n\n")
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
+	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_nsx2mda:$done_time\" >> " + time_log_fpath + ";\n\n")
+	matlab_command = "cd " + paths.globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " > " + session_dir + "/" + current_bash_log_fname + "\n\n")
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("$bandpass_input_mda")
+	sub_cmd.append("$reref_output_mda")
+	sub_cmd.append(str(refset))
+	sub_cmd.append("$used_chans_fpath")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#make check if ignore file is present\n")
-                    sort_sbatch_file.write("################################\n\n")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    sort_sbatch_file.write("if [ ! -f " + session_dir + "/_ignore_me%s.txt ]; then\n\n" % str(iRefset))
-                    print(session_dir + "/" + current_bash_fname)
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	sub_cmd_file.write("echo \"end reref_spike\"\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: bandpass_raw
-                    #################################
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n\n" % str(refset))
 
-                    # find the output mda file from above
+	sub_cmd_file.close()
 
-                    sub_cmd_fname = "bandpass_raw%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_bandpass_raw%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+	return(sub_cmd_fpath)
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
 
-                    # write the sbatch header for sub_cmd bash file
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+def write_split_raw(session_dir, refset):
 
-                    sub_cmd_file.write("\n\n")
+	# write the sort file
+	sub_cmd_fname = "split_raw%s.sh" % str(refset)
+	sub_cmd_log_fname = "_split_raw%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sub_cmd_file.write("source " + MS_env_source + "\n\n")
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    sub_cmd_file.write("echo \"start bandpass_raw\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_raw_bp\n\n")
+	sub_cmd_file.write("\n\n")
 
-                    sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
-                    sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    sub_cmd_file.write("if [ -f $bandpass_output_mda  ]\n")
-                    sub_cmd_file.write("then\n")
-                    sub_cmd_file.write("\trm $bandpass_output_mda \n")
-                    sub_cmd_file.write("fi\n\n")
+	split_dir = session_dir + "/splits"
 
-                    sub_cmd = []
-                    sub_cmd.append(mountainsort_binaries_dir + "/mp-run-process")
-                    sub_cmd.append("ms3.bandpass_filter")
-                    sub_cmd.append("--timeseries=${bandpass_input_nsx}")
-                    sub_cmd.append("--timeseries_out=${bandpass_output_mda}")
-                    sub_cmd.append("--samplerate=30000")
-                    sub_cmd.append("--freq_min=1")
-                    sub_cmd.append("--freq_max=5000")
+	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
+	sub_cmd_file.write("mkdir " + split_dir + "\n")
+	sub_cmd_file.write("fi\n")
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    sub_cmd_file.write("for i in `seq 1 5`;\n")
-                    sub_cmd_file.write("do\n")
-                    sub_cmd_file.write("if [ ! -f ${bandpass_output_mda} ]; then\n")
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("input_filename")
+	sub_cmd.append("$reref_input_mda")
+	sub_cmd.append("output_dir")
+	sub_cmd.append(split_dir)
+	sub_cmd.append("used_chans_fpath")
+	sub_cmd.append("$used_chans_fpath")
+	sub_cmd.append("refset")
+	sub_cmd.append(str(refset))
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    sub_cmd_file.write("fi\n")
-                    sub_cmd_file.write("done\n")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sub_cmd_file.write("echo \"end bandpass_raw\"\n")
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n\n" % str(refset))
 
-                    sub_cmd_file.close()
+	sub_cmd_file.close()
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+	return(sub_cmd_fpath)
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
 
-                    # add sub_cmd to combu_run file
+def write_split_spike(session_dir, refset):
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#bandpass_raw\n")
-                    sort_sbatch_file.write("################################\n")
+	# write the sort file
+	sub_cmd_fname = "split_spike%s.sh" % str(refset)
+	sub_cmd_log_fname = "_split_spike%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#bandpass_raw\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	sub_cmd_file.write("\n\n")
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
+	split_dir = session_dir + "/splits"
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
+	sub_cmd_file.write("mkdir " + split_dir + "\n")
+	sub_cmd_file.write("fi\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: reref_raw
-                    #################################
+	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    sub_cmd_fname = "reref_raw%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_reref_raw%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("input_filename")
+	sub_cmd.append("$reref_input_mda")
+	sub_cmd.append("output_dir")
+	sub_cmd.append(split_dir)
+	sub_cmd.append("used_chans_fpath")
+	sub_cmd.append("$used_chans_fpath")
+	sub_cmd.append("refset")
+	sub_cmd.append(str(refset))
 
-                    # write the sbatch header for sub_cmd bash file
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sub_cmd_file.write("\n\n")
+	sub_cmd_file.close()
 
-                    sub_cmd_file.write("echo \"start reref_raw\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+	return(sub_cmd_fpath)
 
-                    sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
 
-                    sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
-                    sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
+def write_whiten_sort(session_dir, refset):
 
-                    matlab_command = "cd " + globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + matlab_compiler_ver_str
+	sub_cmd_fname = "whiten_sort%s.sh" % str(refset)
+	sub_cmd_log_fname = "_whiten_sort%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("$bandpass_input_mda")
-                    sub_cmd.append("$reref_output_mda")
-                    sub_cmd.append(str(iRefset))
-                    sub_cmd.append("$used_chans_fpath")
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	# write the sbatch header for sub_cmd bash file
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+	sub_cmd_file.write("\n\n")
 
-                    sub_cmd_file.write("echo \"end reref_raw\"\n")
+	sub_cmd_file.write("source " + paths.MS_env_source + "\n\n")
 
-                    sub_cmd_file.close()
+	sub_cmd_file.write("echo \"start whiten_sort\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd_file.write("whiten_input=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("whiten_output_mda=${whiten_input}_whiten\n\n")
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+	sub_cmd_file.write("echo \"input:${whiten_input}\"\n")
+	sub_cmd_file.write("echo \"output:${whiten_output_mda}\"\n\n")
 
-                    # add sub_cmd to combo_run file
+	sub_cmd_file.write("if [ -f $whiten_output_mda  ]\n")
+	sub_cmd_file.write("then\n")
+	sub_cmd_file.write("\trm $whiten_output_mda \n")
+	sub_cmd_file.write("fi\n\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#reref_raw\n")
-                    sort_sbatch_file.write("################################\n")
+	sub_cmd = []
+	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
+	sub_cmd.append("ms3.whiten")
+	sub_cmd.append("--timeseries=${whiten_input}")
+	sub_cmd.append("--timeseries_out=${whiten_output_mda}")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#reref_raw\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+	sub_cmd_file.write("for i in `seq 1 5`;\n")
+	sub_cmd_file.write("do\n")
+	sub_cmd_file.write("if [ ! -f ${whiten_output_mda} ]; then\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+	sub_cmd_file.write("fi\n")
+	sub_cmd_file.write("done\n")
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n\n" % str(iRefset))
+	sub_cmd_file.write("echo \"end whiten_sort\"\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n\n" % str(refset))
 
-                    #################################
-                    #################################
-                    # write sub-command: split_raw
-                    #################################
+	sub_cmd_file.close()
 
-                    # write the sort file
-                    sub_cmd_fname = "split_raw%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_split_raw%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+	return(sub_cmd_fpath)
 
-                    # write the sbatch header for sub_cmd bash file
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+def write_split_sort(session_dir, refset):
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+	# write the sort file
+	sub_cmd_fname = "split_sort%s.sh" % str(refset)
+	sub_cmd_log_fname = "_split_sort%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sub_cmd_file.write("\n\n")
+	# write the sbatch header for sub_cmd bash file
 
-                    sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    split_dir = session_dir + "/splits"
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-                    sub_cmd_file.write("mkdir " + split_dir + "\n")
-                    sub_cmd_file.write("fi\n")
+	sub_cmd_file.write("\n\n")
 
-                    matlab_command = "cd " + splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + matlab_compiler_ver_str
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(refset))
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("input_filename")
-                    sub_cmd.append("$reref_input_mda")
-                    sub_cmd.append("output_dir")
-                    sub_cmd.append(split_dir)
-                    sub_cmd.append("used_chans_fpath")
-                    sub_cmd.append("$used_chans_fpath")
-                    sub_cmd.append("refset")
-                    sub_cmd.append(str(iRefset))
+	split_dir = session_dir + "/splits"
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
+	sub_cmd_file.write("mkdir " + split_dir + "\n")
+	sub_cmd_file.write("fi\n")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    sub_cmd_file.close()
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("input_filename")
+	sub_cmd.append("$reref_input_mda")
+	sub_cmd.append("output_dir")
+	sub_cmd.append(split_dir)
+	sub_cmd.append("used_chans_fpath")
+	sub_cmd.append("$used_chans_fpath")
+	sub_cmd.append("refset")
+	sub_cmd.append(str(refset))
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    # add sub_cmd to combo_run file
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n\n" % str(refset))
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#split_raw\n")
-                    sort_sbatch_file.write("################################\n")
+	sub_cmd_file.close()
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#split_raw\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	return(sub_cmd_fpath)
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_split_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob, job_name):
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_split_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+	split_dir = session_dir + "/splits"
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n\n" % str(iRefset))
+	# write the sort file
+	sub_cmd_fname = "spikeInfo.sh"
+	sub_cmd_log_fname = "_spikeInfo.log"
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	# write the sbatch header for sub_cmd bash file
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=10g")
+	sbatch_header.append("#SBATCH --cpus-per-task=1")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
 
-                    #################################
-                    #################################
-                    # write sub-command: bandpass_spikeband
-                    #################################
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
 
-                    # find the output mda file from above
+	sub_cmd_file.write("#SBATCH --job-name=" + job_name + "\n")
+	sub_cmd_file.write("#SBATCH --dependency=singleton\n")
+	sub_cmd_file.write("#SBATCH --time=48:00:00\n")
+	sub_cmd_file.write("#SBATCH --gres=lscratch:1\n")
 
-                    sub_cmd_fname = "bandpass_spike%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_bandpass_spike%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+	sub_cmd_file.write("\n\n")
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd_file.write("rm -f `ls " + session_dir + "/outputs/* | grep \"_spikeInfo\.mat$\"`\n")
+	sub_cmd_file.write("rm -f `ls " + session_dir + "/outputs/* | grep \"_sortSummary\.mat$\"`\n\n")
 
-                    # write the sbatch header for sub_cmd bash file
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-                    sub_cmd_file.write("\n\n")
+	matlab_command = "cd " + paths.construct_spikeInfoMS_matlab_dir + "/_construct_spikeInfoMS; ./run_construct_spikeInfoMS_swarm.sh " + paths.matlab_compiler_ver_str
 
-                    sub_cmd_file.write("source " + MS_env_source + "\n\n")
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
 
-                    sub_cmd_file.write("echo \"start bandpass_spike\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+	sub_cmd.append("sessRoot")
+	sub_cmd.append(split_dir)
 
-                    sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_spike_bp\n\n")
+	sub_cmd.append("bp_fname_suffix")
+	sub_cmd.append("mda_chan")
 
-                    sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
-                    sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
+	sub_cmd.append("nsx_physio_fpath")
+	sub_cmd.append(nsx_fpath)
 
-                    sub_cmd_file.write("if [ -f $bandpass_output_mda  ]\n")
-                    sub_cmd_file.write("then\n")
-                    sub_cmd_file.write("\trm $bandpass_output_mda \n")
-                    sub_cmd_file.write("fi\n\n")
+	if ns3_glob != []:
+		sub_cmd.append("ns3_pulse_fpath")
+		sub_cmd.append(ns3_glob[0])  # ns3_fpath
 
-                    sub_cmd = []
-                    sub_cmd.append(mountainsort_binaries_dir + "/mp-run-process")
-                    sub_cmd.append("ms3.bandpass_filter")
-                    sub_cmd.append("--timeseries=${bandpass_input_nsx}")
-                    sub_cmd.append("--timeseries_out=${bandpass_output_mda}")
-                    sub_cmd.append("--samplerate=30000")
-                    sub_cmd.append("--freq_min=600")
-                    sub_cmd.append("--freq_max=6000")
+	if nev_glob != []:
+		sub_cmd.append("nev_fpath")
+		sub_cmd.append(nev_glob[0])  # nev_fpath
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("saveRoot")
+	sub_cmd.append(session_dir + "/outputs")
 
-                    sub_cmd_file.write("for i in `seq 1 5`;\n")
-                    sub_cmd_file.write("do\n")
-                    sub_cmd_file.write("if [ ! -f ${bandpass_output_mda} ]; then\n")
+	sub_cmd.append("removeLargeAmpUnits")
+	sub_cmd.append("0")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+	sub_cmd.append("jacksheet_fpath")
+	sub_cmd.append(jacksheet_fpath)
 
-                    sub_cmd_file.write("fi\n")
-                    sub_cmd_file.write("done\n")
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
-                    sub_cmd_file.write("echo \"end bandpass_spike\"\n")
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-                    sub_cmd_file.close()
+	sub_cmd_file.close()
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pulse_ext, nsp_suffix, timestamp, delete_splits):
 
-                    # add sub_cmd to combu_run file
+	session_dir = subj_path + "/" + sess + "/spike"
+	job_name = "FRNU--" + timestamp + "--" + sess
+	nsx_filesize = os.path.getsize(nsx_fpath)
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#bandpass_spike\n")
-                    sort_sbatch_file.write("################################\n")
+	# filename templates
+	bash_fname = "sort_run_all%s.sh"
+	bash_log_fname = "_sort_run_all%s.log"
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	# get pulse filepaths
+	ns3_glob = glob.glob(subj_path + "/" + sess + "/*." + analog_pulse_ext)
+	nev_glob = glob.glob(subj_path + "/" + sess + "/*.nev")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+	# open the jacksheet and see how many microDevNums there are
+	jacksheet = pd.read_csv(jacksheet_fpath)
+	jacksheet_nsp_micro = jacksheet.loc[(jacksheet["NSPsuffix"] == nsp_suffix) & (jacksheet["MicroDevNum"] >= 1)]
+	jacksheet_unique_dev_num = jacksheet_nsp_micro.MicroDevNum.unique().tolist()
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	# wipe away some old files
+	if os.path.isdir(session_dir) is False:
+		os.mkdir(session_dir)
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+	for log_file in glob.glob(session_dir + "/*.log"):
+		os.remove(log_file)
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n\n" % str(iRefset))
+	command_tuple_list = []
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	for irefset, refset in enumerate(jacksheet_unique_dev_num):
 
-                    #################################
-                    #################################
-                    # write sub-command: reref_spike
-                    #################################
+		# set the bash templates to real name
+		current_bash_fname = bash_fname % str(refset)
+		current_bash_log_fname = bash_log_fname % str(refset)
 
-                    sub_cmd_fname = "reref_spike%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_reref_spike%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+		print(current_bash_fname)
 
-                    # write the sbatch header for sub_cmd bash file
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+		# sort by nsx size
+		if nsx_filesize/1e9 < 25:
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+			command_tuple_list.append(("small", refset_bash_command))
 
-                    sub_cmd_file.write("\n\n")
+		elif nsx_filesize/1e9 < 40:
 
-                    sub_cmd_file.write("echo \"start reref_spike\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+			command_tuple_list.append(("large", refset_bash_command))
 
-                    sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
+		else:
 
-                    sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
-                    sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
+			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+			command_tuple_list.append(("xlarge", refset_bash_command))
 
-                    matlab_command = "cd " + globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + matlab_compiler_ver_str
+		# delete existing split files
+		if delete_splits and os.path.isdir(session_dir + "/splits"):
+			shutil.rmtree(session_dir + "/splits")
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("$bandpass_input_mda")
-                    sub_cmd.append("$reref_output_mda")
-                    sub_cmd.append(str(iRefset))
-                    sub_cmd.append("$used_chans_fpath")
+		time_log_fpath = session_dir + "/time.log"
+		sort_sbatch_file = open(session_dir + "/" + current_bash_fname, 'w')
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+		# write the sbatch header for combo bash file
+		sbatch_header = []
+		sbatch_header.append("#!/bin/bash")
+		sbatch_header.append("#SBATCH --mem=200g")
+		sbatch_header.append("#SBATCH --cpus-per-task=5")
+		sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
+		sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
+		sbatch_header.append("#SBATCH --time=10:00:00")
+		sbatch_header.append("#SBATCH --gres=lscratch:1")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+		for l in sbatch_header:
+			sort_sbatch_file.write(l + "\n")
 
-                    sub_cmd_file.write("echo \"end reref_spike\"\n")
+		sort_sbatch_file.write("\n\n")
 
-                    sub_cmd_file.close()
+		# remove an existing _ignore_me.txt
+		sort_sbatch_file.write("if [ -f " + session_dir + "/_ignore_me%s.txt ]; then\n" % str(refset))
+		sort_sbatch_file.write("rm " + session_dir + "/_ignore_me%s.txt\n" % str(refset))
+		sort_sbatch_file.write("fi\n\n")
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+		#################################
+		#################################
+		# load MS env
+		#################################
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+		sort_sbatch_file.write("export done_time\n\n")
 
-                    # add sub_cmd to combo_run file
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#load ms env\n")
+		sort_sbatch_file.write("################################\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#reref_spike\n")
-                    sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("echo -n \"" + sess + ":start_loadEnv:\" > " + time_log_fpath + "; ")
+		sort_sbatch_file.write("date +%s >> " + time_log_fpath + "\n\n")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#reref_spike\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("source " + paths.MS_env_source + "\n\n")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_reref_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_loadEnv:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+		#################################
+		#################################
+		# write sub-command: nsx2mda
+		#################################
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_reref_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+		sub_cmd_fpath = write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset)
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n\n" % str(iRefset))
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#nsx2mda\n")
+		sort_sbatch_file.write("################################\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#nsx2mda\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: split_spike
-                    #################################
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_nsx2mda:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    # write the sort file
-                    sub_cmd_fname = "split_spike%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_split_spike%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    # write the sbatch header for sub_cmd bash file
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_nsx2mda:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#make check if ignore file is present\n")
+		sort_sbatch_file.write("################################\n\n")
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+		sort_sbatch_file.write("if [ ! -f " + session_dir + "/_ignore_me%s.txt ]; then\n\n" % str(refset))
 
-                    sub_cmd_file.write("\n\n")
+		#################################
+		#################################
+		# write sub-command: bandpass_raw
+		#################################
 
-                    sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+		sub_cmd_fpath = write_bandpass_raw(session_dir, refset)
 
-                    split_dir = session_dir + "/splits"
+		# add sub_cmd to combu_run file
 
-                    sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-                    sub_cmd_file.write("mkdir " + split_dir + "\n")
-                    sub_cmd_file.write("fi\n")
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#bandpass_raw\n")
+		sort_sbatch_file.write("################################\n")
 
-                    matlab_command = "cd " + splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + matlab_compiler_ver_str
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#bandpass_raw\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("input_filename")
-                    sub_cmd.append("$reref_input_mda")
-                    sub_cmd.append("output_dir")
-                    sub_cmd.append(split_dir)
-                    sub_cmd.append("used_chans_fpath")
-                    sub_cmd.append("$used_chans_fpath")
-                    sub_cmd.append("refset")
-                    sub_cmd.append(str(iRefset))
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.close()
+		#################################
+		#################################
+		# write sub-command: reref_raw
+		#################################
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+		sub_cmd_fpath = write_reref_raw(session_dir, refset)
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#reref_raw\n")
+		sort_sbatch_file.write("################################\n")
 
-                    # add sub_cmd to combo_run file
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#reref_raw\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#split_spike\n")
-                    sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#split_spike\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_split_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+		#################################
+		#################################
+		# write sub-command: split_raw
+		#################################
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_split_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+		sub_cmd_fpath = write_split_raw(session_dir, refset)
 
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#split_raw\n")
+		sort_sbatch_file.write("################################\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#split_raw\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: whiten_sort
-                    #################################
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_split_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    # find the output mda file from above
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sub_cmd_fname = "whiten_sort%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_whiten_sort%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_split_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+		#################################
+		#################################
+		# write sub-command: bandpass_spikeband
+		#################################
 
-                    # write the sbatch header for sub_cmd bash file
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+		sub_cmd_fpath = write_bandpass_spike(session_dir, refset)
 
-                    sub_cmd_file.write("\n\n")
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#bandpass_spike\n")
+		sort_sbatch_file.write("################################\n")
 
-                    sub_cmd_file.write("source " + MS_env_source + "\n\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    sub_cmd_file.write("echo \"start whiten_sort\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.write("whiten_input=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("whiten_output_mda=${whiten_input}_whiten\n\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sub_cmd_file.write("echo \"input:${whiten_input}\"\n")
-                    sub_cmd_file.write("echo \"output:${whiten_output_mda}\"\n\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.write("if [ -f $whiten_output_mda  ]\n")
-                    sub_cmd_file.write("then\n")
-                    sub_cmd_file.write("\trm $whiten_output_mda \n")
-                    sub_cmd_file.write("fi\n\n")
+		#################################
+		#################################
+		# write sub-command: reref_spike
+		#################################
 
-                    sub_cmd = []
-                    sub_cmd.append(mountainsort_binaries_dir + "/mp-run-process")
-                    sub_cmd.append("ms3.whiten")
-                    sub_cmd.append("--timeseries=${whiten_input}")
-                    sub_cmd.append("--timeseries_out=${whiten_output_mda}")
+		sub_cmd_fpath = write_reref_spike(session_dir, refset)
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#reref_spike\n")
+		sort_sbatch_file.write("################################\n")
 
-                    sub_cmd_file.write("for i in `seq 1 5`;\n")
-                    sub_cmd_file.write("do\n")
-                    sub_cmd_file.write("if [ ! -f ${whiten_output_mda} ]; then\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#reref_spike\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_reref_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.write("fi\n")
-                    sub_cmd_file.write("done\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sub_cmd_file.write("echo \"end whiten_sort\"\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_reref_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.close()
+		#################################
+		#################################
+		# write sub-command: split_spike
+		#################################
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+		sub_cmd_fpath = write_split_spike(session_dir, refset)
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#split_spike\n")
+		sort_sbatch_file.write("################################\n")
 
-                    # add sub_cmd to combu_run file
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#split_spike\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#whiten_sort\n")
-                    sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_split_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#whiten_sort\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_whiten_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_split_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+		#################################
+		#################################
+		# write sub-command: whiten_sort
+		#################################
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_whiten_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+		sub_cmd_fpath = write_whiten_sort(session_dir, refset)
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n\n" % str(iRefset))
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#whiten_sort\n")
+		sort_sbatch_file.write("################################\n")
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#whiten_sort\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    #################################
-                    #################################
-                    # write sub-command: split_sort
-                    #################################
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_whiten_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    # write the sort file
-                    sub_cmd_fname = "split_sort%s.sh" % str(iRefset)
-                    sub_cmd_log_fname = "_split_sort%s.log" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    # write the sbatch header for sub_cmd bash file
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_whiten_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sbatch_header = []
-                    sbatch_header.append("#!/bin/bash")
-                    sbatch_header.append("#SBATCH --mem=120g")
-                    sbatch_header.append("#SBATCH --cpus-per-task=10")
-                    sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-                    sbatch_header.append("#SBATCH --gres=lscratch:1")
+		#################################
+		#################################
+		# write sub-command: split_sort
+		#################################
 
-                    for l in sbatch_header:
-                        sub_cmd_file.write(l + "\n")
+		sub_cmd_fpath = write_split_sort(session_dir, refset)
 
-                    sub_cmd_file.write("\n\n")
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#split_sort\n")
+		sort_sbatch_file.write("################################\n")
 
-                    sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(iRefset))
-                    sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
-                    sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#split_sort\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    split_dir = session_dir + "/splits"
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_split_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-                    sub_cmd_file.write("mkdir " + split_dir + "\n")
-                    sub_cmd_file.write("fi\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    matlab_command = "cd " + splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + matlab_compiler_ver_str
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_split_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sub_cmd = []
-                    sub_cmd.append(matlab_command)
-                    sub_cmd.append("input_filename")
-                    sub_cmd.append("$reref_input_mda")
-                    sub_cmd.append("output_dir")
-                    sub_cmd.append(split_dir)
-                    sub_cmd.append("used_chans_fpath")
-                    sub_cmd.append("$used_chans_fpath")
-                    sub_cmd.append("refset")
-                    sub_cmd.append(str(iRefset))
+		#################################
+		#################################
+		# write sub-command: sort
+		#################################
 
-                    sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+		sub_cmd_fname = "sort%s.sh" % str(refset)
+		sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+		sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+		sub_cmd_file.write("#!/bin/bash\n\n")
+		sub_cmd_file.write("python3 " + paths.spikes_pipeline_dir + "/construct_split_sort_scripts.py " + session_dir + " " + job_name + " " + str(refset) + "\n")
+		sub_cmd_file.write("bash " + session_dir + "/sort_swarm%s.sh\n" % str(refset))
 
-                    sub_cmd_file.close()
+		sub_cmd_file.close()
 
-                    log_files.append(session_dir + "/" + sub_cmd_log_fname)
+		sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("#sort\n")
+		sort_sbatch_file.write("################################\n")
 
-                    #################################
-                    #################################
-                    #################################
-                    #################################
+		sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("echo \"#sort\"\n")
+		sort_sbatch_file.write("echo \"################################\"\n")
 
-                    # add sub_cmd to combo_run file
+		sort_sbatch_file.write("start_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sort_sbatch_file.write("echo \"" + sess + ":start_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#split_sort\n")
-                    sort_sbatch_file.write("################################\n")
+		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#split_sort\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+		sort_sbatch_file.write("done_time=$(date +%s)\n")
+		sort_sbatch_file.write("echo \"" + sess + ":done_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":start_split_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+		#################################
+		#################################
+		# write sub-command: make spikeInfo
+		#################################
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+		if irefset == 1:
+			write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob, job_name)
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write("echo \"" + sess + ":done_split_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
-                    sort_sbatch_file.write("cat " + session_dir + "/" + sub_cmd_log_fname + " >> " + session_dir + "/" + current_bash_log_fname + "\n\n")
+		# closing fi for check if _ignore_me.txt is present
+		sort_sbatch_file.write("fi\n\n")
 
-                    sort_sbatch_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n\n" % str(iRefset))
+		sort_sbatch_file.close()
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+		return(command_tuple_list)
 
-                    #################################
-                    #################################
-                    # write sub-command: sort
-                    #################################
+#########################################################################
+# END FUNCTIONS #########################################################
+#########################################################################
 
-                    sub_cmd_fname = "sort%s.sh" % str(iRefset)
-                    sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                    sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-                    sub_cmd_file.write("#!/bin/bash\n\n")
-                    sub_cmd_file.write("python3 " + spikes_pipeline_dir + "/construct_split_sort_scripts.py " + session_dir + " " + job_name + " " + str(iRefset) + "\n")
-                    sub_cmd_file.write("bash " + session_dir + "/sort_swarm%s.sh\n" % str(iRefset))
+if __name__ == "__main__":
 
-                    sub_cmd_file.close()
+	# directory setup
+	abspath = os.path.abspath(__file__)
+	dname = os.path.dirname(abspath)
 
-                    sort_sbatch_file.write("################################\n")
-                    sort_sbatch_file.write("#sort\n")
-                    sort_sbatch_file.write("################################\n")
+	sys.path.append(dname)
 
-                    sort_sbatch_file.write("echo \"################################\"\n")
-                    sort_sbatch_file.write("echo \"#sort\"\n")
-                    sort_sbatch_file.write("echo \"################################\"\n")
+	if os.path.isfile(dname + "/paths.py") is False:
+		print("move a copy of paths.py into this folder: " + dname)
+		exit(2)
 
-                    sort_sbatch_file.write("start_time=$(date +%s)\n")
-                    sort_sbatch_file.write(
-                        "echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-                    sort_sbatch_file.write(
-                        "echo \"" + sess + ":start_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+	# parse args
+	parser = argparse.ArgumentParser(description='create bash files for spike sorting and lfp extraction')
 
-                    sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	parser.add_argument('subj_path')
+	parser.add_argument('--sesslist', default="")
+	parser.add_argument('--output_suffix', default="initial")
+	parser.add_argument('--keep_splits', action='store_false')
 
-                    sort_sbatch_file.write("done_time=$(date +%s)\n")
-                    sort_sbatch_file.write(
-                        "echo \"" + sess + ":done_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
+	args = parser.parse_args()
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	subj_path = args.subj_path
+	sesslist_fname = args.sesslist
+	output_suffix = args.output_suffix
+	delete_splits = args.keep_splits
 
-                    #################################
-                    #################################
-                    # write sub-command: make spikeInfo
-                    #################################
+	# get current timestamp
+	timestamp = time.strftime("%d_%m_%Y--%H_%M_%S")
 
-                    if iRefset == 1:
+	# get session list
+	if sesslist_fname != "":
 
-                        split_dir = session_dir + "/splits"
+		sesslist = open(sesslist_fname)
+		subj_path_files = [l.strip("\n") for l in sesslist]
+		sesslist.close()
 
-                        spikeInfo_fpath = session_dir + "/outputs/" + "_".join([output_subj_str, output_ymd_hms_str, output_nsp_str]) + "_spikeInfo.mat"
-                        summary_fpath = session_dir + "/outputs/" + "_".join([output_subj_str, output_ymd_hms_str, output_nsp_str]) + "_sortSummary.csv"
+	else:
 
-                        # write the sort file
-                        sub_cmd_fname = "spikeInfo.sh"
-                        sub_cmd_log_fname = "_spikeInfo.log"
-                        sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                        sub_cmd_file = open(sub_cmd_fpath, 'w')
+		subj_path_files = os.listdir(subj_path)
 
-                        # write the sbatch header for sub_cmd bash file
-                        sbatch_header = []
-                        sbatch_header.append("#!/bin/bash")
-                        sbatch_header.append("#SBATCH --mem=10g")
-                        sbatch_header.append("#SBATCH --cpus-per-task=1")
-                        sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-                        sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	subj_path_files.sort()
 
-                        for l in sbatch_header:
-                            sub_cmd_file.write(l + "\n")
+	print("sessions: " + str(len(subj_path_files)))
 
-                        sub_cmd_file.write("#SBATCH --job-name=" + job_name + "\n")
-                        sub_cmd_file.write("#SBATCH --dependency=singleton\n")
-                        sub_cmd_file.write("#SBATCH --time=48:00:00\n")
-                        sub_cmd_file.write("#SBATCH --gres=lscratch:1\n")
+	# gather all session bash lines in list
+	sort_big_bash_list = []
+	sort_big_bash_large_list = []
+	sort_big_bash_xlarge_list = []
 
-                        sub_cmd_file.write("\n\n")
+	session_count = 0
 
-                        sub_cmd_file.write("if [ -f \"" + spikeInfo_fpath + "\" ]; then\n")
-                        sub_cmd_file.write("rm " + spikeInfo_fpath + "\n")
-                        sub_cmd_file.write("fi\n\n")
+	for sess in subj_path_files:
 
-                        sub_cmd_file.write("if [ -f \"" + summary_fpath + "\" ]; then\n")
-                        sub_cmd_file.write("rm " + summary_fpath + "\n")
-                        sub_cmd_file.write("fi\n\n")
+		print("looking at session " + sess)
 
-                        sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+		if os.path.isdir(subj_path + "/" + sess) is True:
 
-                        matlab_command = "cd " + construct_spikeInfoMS_matlab_dir + "/_construct_spikeInfoMS; ./run_construct_spikeInfoMS_swarm.sh " + matlab_compiler_ver_str
+			print(subj_path + "/" + sess + " is a directory")
 
-                        sub_cmd = []
-                        sub_cmd.append(matlab_command)
+			# read the session info file, if there is one
+			session_jacksheet_glob = glob.glob(subj_path + "/" + sess + "/jacksheetBR_complete.csv")
+			session_info_glob = glob.glob(subj_path + "/" + sess + "/*_info.txt")
 
-                        sub_cmd.append("subj_str")
-                        sub_cmd.append(output_subj_str)
+			if session_info_glob != [] and session_jacksheet_glob != []:
 
-                        sub_cmd.append("time_str")
-                        sub_cmd.append(output_ymd_hms_str)
+				session_info_fpath = session_info_glob[0]
+				sesion_jacksheet_fpath = session_jacksheet_glob[0]
 
-                        sub_cmd.append("nsp_str")
-                        sub_cmd.append(output_nsp_str)
+				# open the info.txt for this session
+				session_info_file = open(session_info_fpath)
+				session_info = [l.strip("\n") for l in session_info_file]
+				session_info_file.close()
 
-                        sub_cmd.append("sessRoot")
-                        sub_cmd.append(split_dir)
+				analog_pulse_ext = session_info[0]
+				nsx_ext = session_info[1]
+				nsp_suffix = session_info[2]
 
-                        sub_cmd.append("bp_fname_suffix")
-                        sub_cmd.append("mda_chan")
+				session_nsx_glob = glob.glob(subj_path + "/" + sess + "/*." + nsx_ext)
 
-                        sub_cmd.append("nsx_physio_fpath")
-                        sub_cmd.append(nsx_file)
+				# there is a nsx file, a jacksheet, and an info file. good to go
+				if session_nsx_glob != []:
 
-                        if ns3_glob != []:
-                            sub_cmd.append("ns3_pulse_fpath")
-                            sub_cmd.append(ns3_glob[0])  # ns3_fpath
+					session_nsx_fpath = session_nsx_glob[0]
 
-                        if nev_glob != []:
-                            sub_cmd.append("nev_fpath")
-                            sub_cmd.append(nev_glob[0])  # nev_fpath
+					# write session scripts
+					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, timestamp, delete_splits)
+					session_count = session_count + 1
 
-                        sub_cmd.append("saveRoot")
-                        sub_cmd.append(session_dir + "/outputs")
+					for tup in command_tuple_list:
 
-                        sub_cmd.append("removeLargeAmpUnits")
-                        sub_cmd.append("0")
+						size_cat = tup[0]
+						bash_command = tup[1]
 
-                        sub_cmd.append("elementInfo_fpath")
-                        sub_cmd.append(session_elementInfo_fpath)
+						if size_cat == "small":
+							sort_big_bash_list.append(bash_command)
+						elif size_cat == "large":
+							sort_big_bash_large_list.append(bash_command)
+						elif size_cat == "xlarge":
+							sort_big_bash_xlarge_list.append(bash_command)
 
-                        sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	############################################################################################
 
-                        sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+	sort_big_bash_list += sort_big_bash_large_list
+	sort_big_bash_large_list = []
 
-                        sub_cmd_file.write("if [ -f \"" + spikeInfo_fpath + "\" ]; then\n")
-                        sub_cmd_file.write("rm -r " + split_dir + "\n")
-                        sub_cmd_file.write("fi\n\n")
+	user_cpu_limit = 500
+	total_big_bash_num = len(sort_big_bash_list + sort_big_bash_large_list + sort_big_bash_xlarge_list)
 
-                        sub_cmd_file.close()
+	big_bash_perc_cpu = math.floor(len(sort_big_bash_list)/float(total_big_bash_num) * user_cpu_limit)
+	big_bash_large_perc_cpu = math.floor(len(sort_big_bash_large_list)/float(total_big_bash_num) * user_cpu_limit)
+	big_bash_xlarge_perc_cpu = math.floor(len(sort_big_bash_xlarge_list)/float(total_big_bash_num) * user_cpu_limit)
 
-                        # #################################
-                        # #################################
-                        # #################################
-                        # #################################
+	sort_big_bash_fname = "sort_%s_big_bash.sh" % output_suffix
+	sort_big_bash_large_fname = "sort_%s_big_bash_large.sh" % output_suffix
+	sort_big_bash_xlarge_fname = "sort_%s_big_bash_xlarge.sh" % output_suffix
+	sort_swarm_fname = "sort_%s_swarm.sh" % output_suffix
 
-                        # #add sub_cmd to combo_run file
+	swarm_cpu_count = 10
 
-                        #sort_sbatch_file.write("################################\n")
-                        #sort_sbatch_file.write("#spikeInfo\n")
-                        #sort_sbatch_file.write("################################\n")
+	sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+	sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+	sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
 
-                        #sort_sbatch_file.write("sbatch " + sub_cmd_fpath + "\n")
+	# make subj_path/run_files if it doesnt exist, bash scripts go in there
+	swarm_files_path = subj_path + "/_swarms"
 
-                    ###################################################################################################
-                    ###################################################################################################
-                    ###################################################################################################
+	if os.path.isdir(swarm_files_path) is False:
+		os.mkdir(swarm_files_path)
+		os.mkdir(swarm_files_path + "/log_dump")
 
-                    # closing fi for check if _ignore_me.txt is present
-                    sort_sbatch_file.write("fi\n\n")
+	sort_swarm_command += swarm_files_path + "/log_dump"
+	sort_swarm_command += " -f "
 
-                    sort_sbatch_file.close()
+	sort_large_swarm_command += swarm_files_path + "/log_dump"
+	sort_large_swarm_command += " -f "
 
-                #################################
-                #################################
-                # write sub-command: paste logs together
-                #################################
+	sort_xlarge_swarm_command += swarm_files_path + "/log_dump"
+	sort_xlarge_swarm_command += " -f "
 
-                # sub_cmd_fname = "cat_logs.sh"
-                # sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-                # sub_cmd_file = open(sub_cmd_fpath, 'w')
-                #
-                # sub_cmd_file.write("cat " + " ".join(log_files) + " > " + session_dir + "/" + bash_log_fname)
-                #
-                # sub_cmd_file.close()
+	print("session_count with nsx file: " + str(session_count))
 
-                #################################
-                #################################
-                #################################
-                #################################
+	# write sort swarm file
+	swarm_file = open(swarm_files_path + "/" + sort_swarm_fname, 'w')
 
-                # sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+	if sort_big_bash_list != []:
 
-                ###################################################################################################
-                ###################################################################################################
-                ###################################################################################################
+		big_bash_target_num_bundle_groups = big_bash_perc_cpu/float(swarm_cpu_count)
+		big_bash_bundle_size = math.ceil(len(sort_big_bash_list) / big_bash_target_num_bundle_groups)
+		sort_swarm_command = sort_swarm_command % str(big_bash_bundle_size)
 
-sort_big_bash_list += sort_big_bash_large_list
-sort_big_bash_large_list = []
+		print("sessions in sort_big_bash_list: " + str(len(sort_big_bash_list)))
+		print("         resource distribution: " + str(big_bash_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_bundle_size))
 
-user_cpu_limit = 500
-total_big_bash_num = len(sort_big_bash_list + sort_big_bash_large_list + sort_big_bash_xlarge_list)
+		sort_big_bash_file = open(swarm_files_path + "/" + sort_big_bash_fname, 'w')
 
-big_bash_perc_cpu = math.floor(len(sort_big_bash_list)/float(total_big_bash_num) * user_cpu_limit)
-big_bash_large_perc_cpu = math.floor(len(sort_big_bash_large_list)/float(total_big_bash_num) * user_cpu_limit)
-big_bash_xlarge_perc_cpu = math.floor(len(sort_big_bash_xlarge_list)/float(total_big_bash_num) * user_cpu_limit)
+		for l in sort_big_bash_list:
+			sort_big_bash_file.write(l)
 
-sort_big_bash_fname = "sort_%s_big_bash.sh" % output_suffix
-sort_big_bash_large_fname = "sort_%s_big_bash_large.sh" % output_suffix
-sort_big_bash_xlarge_fname = "sort_%s_big_bash_xlarge.sh" % output_suffix
-sort_swarm_fname = "sort_%s_swarm.sh" % output_suffix
+		sort_big_bash_file.close()
 
-swarm_cpu_count = 10
+		swarm_file.write(sort_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_fname + "\n")
 
-sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+	if sort_big_bash_large_list != []:
 
-# make subj_path/run_files if it doesnt exist, bash scripts go in there
-swarm_files_path = subj_path + "/_swarms"
+		big_bash_large_target_num_bundle_groups = big_bash_large_perc_cpu/float(swarm_cpu_count)
+		big_bash_large_bundle_size = math.ceil(len(sort_big_bash_large_list) / big_bash_large_target_num_bundle_groups)
+		sort_large_swarm_command = sort_large_swarm_command % str(big_bash_large_bundle_size)
 
-if os.path.isdir(swarm_files_path) is False:
-    os.mkdir(swarm_files_path)
-    os.mkdir(swarm_files_path + "/log_dump")
+		print("sessions in sort_big_bash_large_list: " + str(len(sort_big_bash_large_list)))
+		print("               resource distribution: " + str(big_bash_large_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_large_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_large_bundle_size))
 
-sort_swarm_command += swarm_files_path + "/log_dump"
-sort_swarm_command += " -f "
+		sort_big_bash_large_file = open(swarm_files_path + "/" + sort_big_bash_large_fname, 'w')
 
-sort_large_swarm_command += swarm_files_path + "/log_dump"
-sort_large_swarm_command += " -f "
+		for l in sort_big_bash_large_list:
+			sort_big_bash_large_file.write(l)
 
-sort_xlarge_swarm_command += swarm_files_path + "/log_dump"
-sort_xlarge_swarm_command += " -f "
+		sort_big_bash_large_file.close()
 
-print("session_count with nsx file: " + str(session_count))
+		swarm_file.write(sort_large_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_large_fname + "\n")
 
-# write sort swarm file
-swarm_file = open(swarm_files_path + "/" + sort_swarm_fname, 'w')
+	if sort_big_bash_xlarge_list != []:
 
-if sort_big_bash_list != []:
+		big_bash_xlarge_target_num_bundle_groups = big_bash_xlarge_perc_cpu/float(swarm_cpu_count)
+		big_bash_xlarge_bundle_size = math.ceil(len(sort_big_bash_xlarge_list) / big_bash_xlarge_target_num_bundle_groups)
+		sort_xlarge_swarm_command = sort_xlarge_swarm_command % str(big_bash_xlarge_bundle_size)
 
-    big_bash_target_num_bundle_groups = big_bash_perc_cpu/float(swarm_cpu_count)
-    big_bash_bundle_size = math.ceil(len(sort_big_bash_list) / big_bash_target_num_bundle_groups)
-    sort_swarm_command = sort_swarm_command % str(big_bash_bundle_size)
+		print("sessions in sort_big_bash_xlarge_list: " + str(len(sort_big_bash_xlarge_list)))
+		print("                resource distribution: " + str(big_bash_xlarge_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_xlarge_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_xlarge_bundle_size))
 
-    print("sessions in sort_big_bash_list: " + str(len(sort_big_bash_list)))
-    print("         resource distribution: " + str(big_bash_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_bundle_size))
+		sort_big_bash_xlarge_file = open(swarm_files_path + "/" + sort_big_bash_xlarge_fname, 'w')
 
-    sort_big_bash_file = open(swarm_files_path + "/" + sort_big_bash_fname, 'w')
+		for l in sort_big_bash_xlarge_list:
+			sort_big_bash_xlarge_file.write(l)
 
-    for l in sort_big_bash_list:
-        sort_big_bash_file.write(l)
+		sort_big_bash_xlarge_file.close()
 
-    sort_big_bash_file.close()
+		swarm_file.write(sort_xlarge_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_xlarge_fname + "\n")
 
-    swarm_file.write(sort_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_fname + "\n")
-
-if sort_big_bash_large_list != []:
-
-    big_bash_large_target_num_bundle_groups = big_bash_large_perc_cpu/float(swarm_cpu_count)
-    big_bash_large_bundle_size = math.ceil(len(sort_big_bash_large_list) / big_bash_large_target_num_bundle_groups)
-    sort_large_swarm_command = sort_large_swarm_command % str(big_bash_large_bundle_size)
-
-    print("sessions in sort_big_bash_large_list: " + str(len(sort_big_bash_large_list)))
-    print("               resource distribution: " + str(big_bash_large_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_large_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_large_bundle_size))
-
-    sort_big_bash_large_file = open(swarm_files_path + "/" + sort_big_bash_large_fname, 'w')
-
-    for l in sort_big_bash_large_list:
-        sort_big_bash_large_file.write(l)
-
-    sort_big_bash_large_file.close()
-
-    swarm_file.write(sort_large_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_large_fname + "\n")
-
-if sort_big_bash_xlarge_list != []:
-
-    big_bash_xlarge_target_num_bundle_groups = big_bash_xlarge_perc_cpu/float(swarm_cpu_count)
-    big_bash_xlarge_bundle_size = math.ceil(len(sort_big_bash_xlarge_list) / big_bash_xlarge_target_num_bundle_groups)
-    sort_xlarge_swarm_command = sort_xlarge_swarm_command % str(big_bash_xlarge_bundle_size)
-
-    print("sessions in sort_big_bash_xlarge_list: " + str(len(sort_big_bash_xlarge_list)))
-    print("                resource distribution: " + str(big_bash_xlarge_perc_cpu) + " cpus of " + str(user_cpu_limit) + " ~ bundle groups: " + str(big_bash_xlarge_target_num_bundle_groups) + " with jobs per bundle: " + str(big_bash_xlarge_bundle_size))
-
-    sort_big_bash_xlarge_file = open(swarm_files_path + "/" + sort_big_bash_xlarge_fname, 'w')
-
-    for l in sort_big_bash_xlarge_list:
-        sort_big_bash_xlarge_file.write(l)
-
-    sort_big_bash_xlarge_file.close()
-
-    swarm_file.write(sort_xlarge_swarm_command + " " + swarm_files_path + "/" + sort_big_bash_xlarge_fname + "\n")
-
-
-swarm_file.close()
+	swarm_file.close()
