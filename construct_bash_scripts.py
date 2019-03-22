@@ -631,8 +631,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		current_bash_fname = bash_fname % str(refset)
 		current_bash_log_fname = bash_log_fname % str(refset)
 
-		print(current_bash_fname)
-
 		# sort by nsx size
 		if nsx_filesize/1e9 < 25:
 
@@ -1025,17 +1023,19 @@ if __name__ == "__main__":
 
 	for sess in subj_path_files:
 
-		print("looking at session " + sess)
+		print("looking at session" + sess, end="")
 
 		if os.path.isdir(subj_path + "/" + sess) is True:
 
-			print(subj_path + "/" + sess + " is a directory")
+			print(" ... is a directory", end="")
 
 			# read the session info file, if there is one
 			session_jacksheet_glob = glob.glob(subj_path + "/" + sess + "/jacksheetBR_complete.csv")
 			session_info_glob = glob.glob(subj_path + "/" + sess + "/*_info.txt")
 
 			if session_info_glob != [] and session_jacksheet_glob != []:
+
+				print(" ... has jacksheet + info", end="")
 
 				session_info_fpath = session_info_glob[0]
 				sesion_jacksheet_fpath = session_jacksheet_glob[0]
@@ -1053,6 +1053,8 @@ if __name__ == "__main__":
 
 				# there is a nsx file, a jacksheet, and an info file. good to go
 				if session_nsx_glob != []:
+
+					print(" ... has an nsx file! zoom!")
 
 					session_nsx_fpath = session_nsx_glob[0]
 
