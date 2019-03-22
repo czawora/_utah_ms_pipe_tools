@@ -1024,7 +1024,7 @@ if __name__ == "__main__":
 
 	for sess in subj_path_files:
 
-		print("looking at session" + sess, end="")
+		print("looking at session " + sess, end="")
 
 		if os.path.isdir(subj_path + "/" + sess) is True:
 
