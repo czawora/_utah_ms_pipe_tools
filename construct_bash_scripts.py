@@ -333,7 +333,7 @@ def write_split_raw(session_dir, refset):
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	split_dir = session_dir + "/splits"
+	split_dir = session_dir + "/splits_raw"
 
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
@@ -386,11 +386,10 @@ def write_split_spike(session_dir, refset):
 	sub_cmd_file.write("\n\n")
 
 	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(refset))
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	split_dir = session_dir + "/splits"
+	split_dir = session_dir + "/splits_spike"
 
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
@@ -406,8 +405,6 @@ def write_split_spike(session_dir, refset):
 	sub_cmd.append("$reref_input_mda")
 	sub_cmd.append("output_dir")
 	sub_cmd.append(split_dir)
-	sub_cmd.append("used_chans_fpath")
-	sub_cmd.append("$used_chans_fpath")
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
@@ -443,12 +440,11 @@ def write_split_sort(session_dir, refset):
 
 	sub_cmd_file.write("\n\n")
 
-	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(refset))
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	split_dir = session_dir + "/splits"
+	split_dir = session_dir + "/splits_sort"
 
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
@@ -464,8 +460,6 @@ def write_split_sort(session_dir, refset):
 	sub_cmd.append("$reref_input_mda")
 	sub_cmd.append("output_dir")
 	sub_cmd.append(split_dir)
-	sub_cmd.append("used_chans_fpath")
-	sub_cmd.append("$used_chans_fpath")
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
