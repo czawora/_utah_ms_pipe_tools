@@ -635,13 +635,16 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		os.mkdir(session_dir)
 
 	# delete existing split files
-	if delete_splits and os.path.isdir(session_dir + "/splits"):
-		print(" ... removing old split/ dir", end="")
-		shutil.rmtree(session_dir + "/splits")
+	if delete_splits is True:
+		for split_dir in glob.glob(session_dir + "/splits*"):
+			print(" ... removing old split/ dir", end="")
+			shutil.rmtree(split_dir)
 
-	for log_file in glob.glob(session_dir + "/*.log"):
+	log_glob = glob.glob(session_dir + "/*.log")
+	if log_glob != []:
 		print(" ... removing old log files", end="")
-		os.remove(log_file)
+		for log_file in log_glob:
+			os.rename(log_file, log_file + ".old")
 
 	command_tuple_list = []
 
@@ -678,7 +681,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
 		sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
 		sbatch_header.append("#SBATCH --time=10:00:00")
-		sbatch_header.append("#SBATCH --gres=lscratch:1")
+		sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 		for l in sbatch_header:
 			sort_sbatch_file.write(l + "\n")
@@ -1101,9 +1104,9 @@ if __name__ == "__main__":
 
 	swarm_cpu_count = 10
 
-	sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-	sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
-	sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+	sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
+	sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
+	sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
 
 	# make subj_path/run_files if it doesnt exist, bash scripts go in there
 	swarm_files_path = subj_path + "/_swarms"
