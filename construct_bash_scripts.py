@@ -330,14 +330,13 @@ def write_split_raw(session_dir, refset):
 	sub_cmd_file.write("\n\n")
 
 	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n" % str(refset))
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
 	split_dir = session_dir + "/splits"
 
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-	sub_cmd_file.write("mkdir " + split_dir + "\n")
+	sub_cmd_file.write("mkdir " +  + "\n")
 	sub_cmd_file.write("fi\n")
 
 	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
@@ -350,8 +349,6 @@ def write_split_raw(session_dir, refset):
 	sub_cmd.append("$reref_input_mda")
 	sub_cmd.append("output_dir")
 	sub_cmd.append(split_dir)
-	sub_cmd.append("used_chans_fpath")
-	sub_cmd.append("$used_chans_fpath")
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
@@ -423,6 +420,66 @@ def write_split_spike(session_dir, refset):
 	return(sub_cmd_fpath)
 
 
+def write_split_sort(session_dir, refset):
+
+	# write the sort file
+	sub_cmd_fname = "split_sort%s.sh" % str(refset)
+	sub_cmd_log_fname = "_split_sort%s.log" % str(refset)
+	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+	sub_cmd_file = open(sub_cmd_fpath, 'w')
+
+	# write the sbatch header for sub_cmd bash file
+
+	sbatch_header = []
+	sbatch_header.append("#!/bin/bash")
+	sbatch_header.append("#SBATCH --mem=120g")
+	sbatch_header.append("#SBATCH --cpus-per-task=10")
+	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
+
+	for l in sbatch_header:
+		sub_cmd_file.write(l + "\n")
+
+	sub_cmd_file.write("\n\n")
+
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(refset))
+	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
+	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
+	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
+
+	split_dir = session_dir + "/splits"
+
+	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
+	sub_cmd_file.write("mkdir " + split_dir + "\n")
+	sub_cmd_file.write("fi\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
+
+	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
+
+	sub_cmd = []
+	sub_cmd.append(matlab_command)
+	sub_cmd.append("input_filename")
+	sub_cmd.append("$reref_input_mda")
+	sub_cmd.append("output_dir")
+	sub_cmd.append(split_dir)
+	sub_cmd.append("used_chans_fpath")
+	sub_cmd.append("$used_chans_fpath")
+	sub_cmd.append("refset")
+	sub_cmd.append(str(refset))
+
+	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+
+	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
+
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n\n" % str(refset))
+
+	sub_cmd_file.close()
+
+	return(sub_cmd_fpath)
+
+
 def write_whiten_sort(session_dir, refset):
 
 	sub_cmd_fname = "whiten_sort%s.sh" % str(refset)
@@ -479,66 +536,6 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd_file.write("echo \"end whiten_sort\"\n")
 
 	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n\n" % str(refset))
-
-	sub_cmd_file.close()
-
-	return(sub_cmd_fpath)
-
-
-def write_split_sort(session_dir, refset):
-
-	# write the sort file
-	sub_cmd_fname = "split_sort%s.sh" % str(refset)
-	sub_cmd_log_fname = "_split_sort%s.log" % str(refset)
-	sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-	sub_cmd_file = open(sub_cmd_fpath, 'w')
-
-	# write the sbatch header for sub_cmd bash file
-
-	sbatch_header = []
-	sbatch_header.append("#!/bin/bash")
-	sbatch_header.append("#SBATCH --mem=120g")
-	sbatch_header.append("#SBATCH --cpus-per-task=10")
-	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:15")
-
-	for l in sbatch_header:
-		sub_cmd_file.write(l + "\n")
-
-	sub_cmd_file.write("\n\n")
-
-	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_bp_reref_whiten$\"`\n" % str(refset))
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
-	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
-	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
-
-	split_dir = session_dir + "/splits"
-
-	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-	sub_cmd_file.write("mkdir " + split_dir + "\n")
-	sub_cmd_file.write("fi\n")
-
-	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
-
-	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
-
-	sub_cmd = []
-	sub_cmd.append(matlab_command)
-	sub_cmd.append("input_filename")
-	sub_cmd.append("$reref_input_mda")
-	sub_cmd.append("output_dir")
-	sub_cmd.append(split_dir)
-	sub_cmd.append("used_chans_fpath")
-	sub_cmd.append("$used_chans_fpath")
-	sub_cmd.append("refset")
-	sub_cmd.append(str(refset))
-
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
-
-	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
-
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -1061,8 +1058,8 @@ if __name__ == "__main__":
 				session_info = [l.strip("\n") for l in session_info_file]
 				session_info_file.close()
 
-				analog_pulse_ext = session_info[0]
-				nsx_ext = session_info[1]
+				nsx_ext = session_info[0]
+				analog_pulse_ext = session_info[1]
 				nsp_suffix = session_info[2]
 
 				session_nsx_glob = glob.glob(subj_path + "/" + sess + "/*." + nsx_ext)
