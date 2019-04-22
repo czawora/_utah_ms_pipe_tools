@@ -336,7 +336,7 @@ def write_split_raw(session_dir, refset):
 	split_dir = session_dir + "/splits"
 
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
-	sub_cmd_file.write("mkdir " +  + "\n")
+	sub_cmd_file.write("mkdir " + split_dir + "\n")
 	sub_cmd_file.write("fi\n")
 
 	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
