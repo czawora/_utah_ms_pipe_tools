@@ -1,7 +1,7 @@
 
 data_dir_name = "FRNU"
 
-matlab_compiler_ver_str = "/usr/local/matlab-compiler/v94"
+matlab_compiler_ver_str = "/lscratch/$SLURM_JOB_ID/v94"
 
 spikes_pipeline_dir = "/data/%s/python_scripts/_utah_ms_pipe_tools" % data_dir_name
 lfp_pipeline_dir = "/data/%s/python_scripts/_utah_lfp_pipe_tools" % data_dir_name

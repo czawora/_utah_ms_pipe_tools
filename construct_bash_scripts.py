@@ -39,7 +39,7 @@ def write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=2")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -49,11 +49,15 @@ def write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset):
 	sub_cmd_file.write("echo \"start nsx2mda\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
+
 	# convert to mda format
 	matlab_command = "cd " + paths.nsx2mda_matlab_dir + "/_nsx2mda; ./run_nsx2mda_swarm.sh " + paths.matlab_compiler_ver_str
 
 	sub_cmd = []
 	sub_cmd.append(matlab_command)
+	sub_cmd.append("session_dir")
+	sub_cmd.append(session_dir)
 	sub_cmd.append("nsx_fpath")
 	sub_cmd.append(nsx_fpath)
 	sub_cmd.append("refset")
@@ -213,7 +217,7 @@ def write_reref_raw(session_dir, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=10")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -223,12 +227,13 @@ def write_reref_raw(session_dir, refset):
 	sub_cmd_file.write("echo \"start reref_raw\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
 	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n" % str(refset))
 	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
 	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
 
 	matlab_command = "cd " + paths.globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + paths.matlab_compiler_ver_str
 
@@ -236,8 +241,6 @@ def write_reref_raw(session_dir, refset):
 	sub_cmd.append(matlab_command)
 	sub_cmd.append("$bandpass_input_mda")
 	sub_cmd.append("$reref_output_mda")
-	sub_cmd.append(str(refset))
-	sub_cmd.append("$used_chans_fpath")
 
 	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
@@ -266,7 +269,7 @@ def write_reref_spike(session_dir, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=10")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -276,12 +279,13 @@ def write_reref_spike(session_dir, refset):
 	sub_cmd_file.write("echo \"start reref_spike\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("used_chans_fpath=`ls " + session_dir + "/* | grep \"refset%s_used_chans\.txt$\"`\n" % str(refset))
 	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n" % str(refset))
 	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
 	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
 
 	matlab_command = "cd " + paths.globalReref_allchan_matlab_dir + "/_globalReref_allchan; ./run_globalReref_allchan_swarm.sh " + paths.matlab_compiler_ver_str
 
@@ -289,8 +293,6 @@ def write_reref_spike(session_dir, refset):
 	sub_cmd.append(matlab_command)
 	sub_cmd.append("$bandpass_input_mda")
 	sub_cmd.append("$reref_output_mda")
-	sub_cmd.append(str(refset))
-	sub_cmd.append("$used_chans_fpath")
 
 	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
@@ -320,7 +322,7 @@ def write_split_raw(session_dir, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=10")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -337,6 +339,8 @@ def write_split_raw(session_dir, refset):
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
 	sub_cmd_file.write("fi\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
 
 	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
@@ -377,7 +381,7 @@ def write_split_spike(session_dir, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=10")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -394,6 +398,8 @@ def write_split_spike(session_dir, refset):
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
 	sub_cmd_file.write("fi\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
 
 	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
@@ -495,7 +501,7 @@ def write_split_sort(session_dir, refset):
 	sbatch_header.append("#SBATCH --cpus-per-task=10")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --gres=lscratch:1")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
@@ -512,6 +518,8 @@ def write_split_sort(session_dir, refset):
 	sub_cmd_file.write("if [ ! -d \"" + split_dir + "\" ]; then\n")
 	sub_cmd_file.write("mkdir " + split_dir + "\n")
 	sub_cmd_file.write("fi\n")
+
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
 
 	matlab_command = "cd " + paths.splitmda_matlab_dir + "/_splitmda; ./run_splitmda_swarm.sh " + paths.matlab_compiler_ver_str
 
@@ -561,7 +569,7 @@ def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob,
 	sub_cmd_file.write("#SBATCH --job-name=" + job_name + "\n")
 	sub_cmd_file.write("#SBATCH --dependency=singleton\n")
 	sub_cmd_file.write("#SBATCH --time=48:00:00\n")
-	sub_cmd_file.write("#SBATCH --gres=lscratch:1\n")
+	sub_cmd_file.write("#SBATCH --gres=lscratch:15\n")
 
 	sub_cmd_file.write("\n\n")
 
@@ -570,12 +578,17 @@ def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob,
 
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
+	sub_cmd_file.write("tar -C /lscratch/$SLURM_JOB_ID -xf /usr/local/matlab-compiler/v94.tar.gz;")
+
 	matlab_command = "cd " + paths.construct_spikeInfoMS_matlab_dir + "/_construct_spikeInfoMS; ./run_construct_spikeInfoMS_swarm.sh " + paths.matlab_compiler_ver_str
 
 	sub_cmd = []
 	sub_cmd.append(matlab_command)
 
-	sub_cmd.append("sessRoot")
+	sub_cmd.append("session_path")
+	sub_cmd.append(session_dir)
+
+	sub_cmd.append("split_path")
 	sub_cmd.append(split_dir)
 
 	sub_cmd.append("bp_fname_suffix")
@@ -636,7 +649,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		shutil.rmtree(session_dir + "/splits")
 
 	for log_file in glob.glob(session_dir + "/*.log"):
-		print(" ... removing old split/ dir", end="")
+		print(" ... removing old log files", end="")
 		os.remove(log_file)
 
 	command_tuple_list = []
