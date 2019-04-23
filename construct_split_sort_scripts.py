@@ -4,7 +4,7 @@ import os
 import sys
 import glob
 
-clip_size = 50
+clip_size = 300
 num_features = 2
 run_mode = "seq"
 
@@ -60,6 +60,10 @@ for mda_fpath in split_mda:
 	channel_num = mda_splits[-2].split("_")[-1]
 	session_name = mda_splits[-5]
 	session_path = "/".join(mda_splits[0:-3])
+
+	# find raw channel split file
+	raw_chan_fpath = glob.glob(session_dir + "/splits_raw/*/" + mda_fname)
+	spike_chan_fpath = glob.glob(session_dir + "/splits_spike/*/" + mda_fname)
 
 	# remove the attempts file from a previous run
 	count_fpath = mda_path + "/attempts.log"
@@ -137,12 +141,24 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("\trm " + isol_pair_metrics_out_fpath + "\n")
 	sub_cmd_file.write("fi\n\n")
 
-	clips_out_fpath = mda_path + "/clips.mda"
+	clips_whiten_out_fpath = mda_path + "/clips_whiten.mda"
+	clips_raw_out_fpath = mda_path + "/clips_raw.mda"
+	clips_spike_out_fpath = mda_path + "/clips_spike.mda"
 
 	# remove old result
-	sub_cmd_file.write("if [ -f " + clips_out_fpath + " ]\n")
+	sub_cmd_file.write("if [ -f " + clips_whiten_out_fpath + " ]\n")
 	sub_cmd_file.write("then\n")
-	sub_cmd_file.write("\trm " + clips_out_fpath + "\n")
+	sub_cmd_file.write("\trm " + clips_whiten_out_fpath + "\n")
+	sub_cmd_file.write("fi\n\n")
+
+	sub_cmd_file.write("if [ -f " + clips_raw_out_fpath + " ]\n")
+	sub_cmd_file.write("then\n")
+	sub_cmd_file.write("\trm " + clips_raw_out_fpath + "\n")
+	sub_cmd_file.write("fi\n\n")
+
+	sub_cmd_file.write("if [ -f " + clips_spike_out_fpath + " ]\n")
+	sub_cmd_file.write("then\n")
+	sub_cmd_file.write("\trm " + clips_spike_out_fpath + "\n")
 	sub_cmd_file.write("fi\n\n")
 
 	features_out_fpath = mda_path + "/clip_features.mda"
@@ -266,7 +282,7 @@ for mda_fpath in split_mda:
 	sub_cmd_clips.append("ms3.mv_extract_clips")
 	sub_cmd_clips.append("--timeseries=" + mda_fpath)
 	sub_cmd_clips.append("--firings=" + sort_out_fpath)
-	sub_cmd_clips.append("--clips_out=" + clips_out_fpath)
+	sub_cmd_clips.append("--clips_out=" + clips_whiten_out_fpath)
 	sub_cmd_clips.append("--clip_size=" + str(clip_size))
 
 	sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
@@ -284,6 +300,58 @@ for mda_fpath in split_mda:
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
+
+	if raw_chan_fpath != []:
+
+		sub_cmd_clips = []
+		sub_cmd_clips.append("mp-run-process")
+		sub_cmd_clips.append("ms3.mv_extract_clips")
+		sub_cmd_clips.append("--timeseries=" + raw_chan_fpath[0])
+		sub_cmd_clips.append("--firings=" + sort_out_fpath)
+		sub_cmd_clips.append("--clips_out=" + clips_raw_out_fpath)
+		sub_cmd_clips.append("--clip_size=" + str(clip_size))
+
+		sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
+
+		sub_cmd_file.write("################################\n")
+		sub_cmd_file.write("#run extract_clips\n")
+		sub_cmd_file.write("################################\n")
+
+		# timing
+		sub_cmd_file.write("start_time=$(date +%s)\n")
+		sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sub_cmd_file.write("echo \"" + raw_chan_fpath[0] + ":start_clips:$start_time\" >> " + time_log_fpath + ";\n\n")
+
+		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n\n")
+
+		sub_cmd_file.write("done_time=$(date +%s)\n")
+		sub_cmd_file.write("echo \"" + raw_chan_fpath[0] + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
+
+	if spike_chan_fpath != []:
+
+		sub_cmd_clips = []
+		sub_cmd_clips.append("mp-run-process")
+		sub_cmd_clips.append("ms3.mv_extract_clips")
+		sub_cmd_clips.append("--timeseries=" + spike_chan_fpath[0])
+		sub_cmd_clips.append("--firings=" + sort_out_fpath)
+		sub_cmd_clips.append("--clips_out=" + clips_spike_out_fpath)
+		sub_cmd_clips.append("--clip_size=" + str(clip_size))
+
+		sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
+
+		sub_cmd_file.write("################################\n")
+		sub_cmd_file.write("#run extract_clips\n")
+		sub_cmd_file.write("################################\n")
+
+		# timing
+		sub_cmd_file.write("start_time=$(date +%s)\n")
+		sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+		sub_cmd_file.write("echo \"" + spike_chan_fpath[0] + ":start_clips:$start_time\" >> " + time_log_fpath + ";\n\n")
+
+		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n\n")
+
+		sub_cmd_file.write("done_time=$(date +%s)\n")
+		sub_cmd_file.write("echo \"" + spike_chan_fpath[0] + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
 
 	################################
 	# run extract_clip_features
