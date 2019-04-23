@@ -648,7 +648,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	command_tuple_list = []
 
-	print(" ... dev nums: " + " ".join(jacksheet_unique_dev_num))
+	print(" ... dev nums: " + " ".join(map(str, jacksheet_unique_dev_num)))
 
 	for irefset, refset in enumerate(jacksheet_unique_dev_num):
 
