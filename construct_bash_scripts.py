@@ -1072,6 +1072,7 @@ if __name__ == "__main__":
 
 					# write session scripts
 					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, timestamp, delete_splits)
+					print(command_tuple_list)
 					session_count = session_count + 1
 
 					for tup in command_tuple_list:
