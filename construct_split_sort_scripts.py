@@ -14,8 +14,8 @@ dname = os.path.dirname(abspath)
 sys.path.append(dname)
 
 if os.path.isfile(dname + "/paths.py") is False:
-    print("move a copy of paths.py into this folder: " + dname)
-    exit(2)
+	print("move a copy of paths.py into this folder: " + dname)
+	exit(2)
 
 from paths import *
 
@@ -49,7 +49,7 @@ session_swarm.close()
 
 session_big_bash = open(session_dir + "/sort_big_bash%s.sh" % refset, 'w')
 
-split_mda = glob.glob(session_dir + "/splits/*/*.refset%s_mda_chan" % refset)
+split_mda = glob.glob(session_dir + "/splits/*/*refset%s*mda_chan" % refset)
 
 for mda_fpath in split_mda:
 
@@ -63,7 +63,7 @@ for mda_fpath in split_mda:
 
 	# remove the attempts file from a previous run
 	count_fpath = mda_path + "/attempts.log"
-	if os.path.isfile(count_fpath) == True:
+	if os.path.isfile(count_fpath) is True:
 		os.remove(count_fpath)
 
 	# time log file
@@ -256,7 +256,6 @@ for mda_fpath in split_mda:
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_isolMetrics:$done_time\" >> " + time_log_fpath + ";\n\n")
-
 
 	################################
 	# run extract_clips
