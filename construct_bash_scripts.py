@@ -983,7 +983,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 		sort_sbatch_file.close()
 
-		return(command_tuple_list)
+	return(command_tuple_list)
 
 #########################################################################
 # END FUNCTIONS #########################################################
