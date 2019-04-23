@@ -388,49 +388,49 @@ for mda_fpath in split_mda:
 	# run plotChannelSpikes
 	################################
 
-	# make command
-	sub_cmd_feats = []
-	sub_cmd_feats.append("cd " + plotChannelSpikes_matlab_dir + "/_plotChannelSpikes; ./run_plotChannelSpikes_swarm.sh /usr/local/matlab-compiler/v94")
-	sub_cmd_feats.append("session_name")
-	sub_cmd_feats.append(session_name)
-	sub_cmd_feats.append("channel_num")
-	sub_cmd_feats.append(channel_num)
-	sub_cmd_feats.append("clip_features")
-	sub_cmd_feats.append(features_out_fpath)
-	sub_cmd_feats.append("clips")
-	sub_cmd_feats.append(clips_out_fpath)
-	sub_cmd_feats.append("firings")
-	sub_cmd_feats.append(sort_out_fpath)
-	sub_cmd_feats.append("isol_metrics")
-	sub_cmd_feats.append(isol_metrics_out_fpath)
-	sub_cmd_feats.append("isol_pair_metrics")
-	sub_cmd_feats.append(isol_pair_metrics_out_fpath)
-	sub_cmd_feats.append("metrics")
-	sub_cmd_feats.append(metrics_out_fpath)
-	sub_cmd_feats.append("mda")
-	sub_cmd_feats.append(mda_fpath)
-	sub_cmd_feats.append("saveDir")
-	sub_cmd_feats.append(session_path + "/outputs/sortFigs")
-
-	sub_cmd_feats.append("&>> " + mda_path + "/$sort_log_fname")
-
-	sub_cmd_file.write("################################\n")
-	sub_cmd_file.write("#run plotChannelSpikes\n")
-	sub_cmd_file.write("################################\n")
-
-	# timing
-	sub_cmd_file.write("start_time=$(date +%s)\n")
-	sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-	sub_cmd_file.write("echo \"" + mda_path + ":start_plotting:$start_time\" >> " + time_log_fpath + ";\n\n")
-
-	sub_cmd_file.write(" ".join(sub_cmd_feats) + "\n\n")
-
-	sub_cmd_file.write("done_time=$(date +%s)\n")
-	sub_cmd_file.write("echo \"" + mda_path + ":done_plotting:$done_time\" >> " + time_log_fpath + ";\n\n")
-
-	sub_cmd_file.write("\n\n")
-	sub_cmd_file.write("###closing 'fi' for if statement checking presence of firings.mda output file\n")
-	sub_cmd_file.write("fi\n\n")
+	# # make command
+	# sub_cmd_feats = []
+	# sub_cmd_feats.append("cd " + plotChannelSpikes_matlab_dir + "/_plotChannelSpikes; ./run_plotChannelSpikes_swarm.sh /usr/local/matlab-compiler/v94")
+	# sub_cmd_feats.append("session_name")
+	# sub_cmd_feats.append(session_name)
+	# sub_cmd_feats.append("channel_num")
+	# sub_cmd_feats.append(channel_num)
+	# sub_cmd_feats.append("clip_features")
+	# sub_cmd_feats.append(features_out_fpath)
+	# sub_cmd_feats.append("clips")
+	# sub_cmd_feats.append(clips_whiten_out_fpath)
+	# sub_cmd_feats.append("firings")
+	# sub_cmd_feats.append(sort_out_fpath)
+	# sub_cmd_feats.append("isol_metrics")
+	# sub_cmd_feats.append(isol_metrics_out_fpath)
+	# sub_cmd_feats.append("isol_pair_metrics")
+	# sub_cmd_feats.append(isol_pair_metrics_out_fpath)
+	# sub_cmd_feats.append("metrics")
+	# sub_cmd_feats.append(metrics_out_fpath)
+	# sub_cmd_feats.append("mda")
+	# sub_cmd_feats.append(mda_fpath)
+	# sub_cmd_feats.append("saveDir")
+	# sub_cmd_feats.append(session_path + "/outputs/sortFigs")
+	#
+	# sub_cmd_feats.append("&>> " + mda_path + "/$sort_log_fname")
+	#
+	# sub_cmd_file.write("################################\n")
+	# sub_cmd_file.write("#run plotChannelSpikes\n")
+	# sub_cmd_file.write("################################\n")
+	#
+	# # timing
+	# sub_cmd_file.write("start_time=$(date +%s)\n")
+	# sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+	# sub_cmd_file.write("echo \"" + mda_path + ":start_plotting:$start_time\" >> " + time_log_fpath + ";\n\n")
+	#
+	# sub_cmd_file.write(" ".join(sub_cmd_feats) + "\n\n")
+	#
+	# sub_cmd_file.write("done_time=$(date +%s)\n")
+	# sub_cmd_file.write("echo \"" + mda_path + ":done_plotting:$done_time\" >> " + time_log_fpath + ";\n\n")
+	#
+	# sub_cmd_file.write("\n\n")
+	# sub_cmd_file.write("###closing 'fi' for if statement checking presence of firings.mda output file\n")
+	# sub_cmd_file.write("fi\n\n")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#check for completion\n")
