@@ -1144,7 +1144,7 @@ if __name__ == "__main__":
 		sort_big_bash_file = open(swarm_files_path + "/" + sort_big_bash_fname, 'w')
 
 		for l in sort_big_bash_list:
-			sort_big_bash_file.write(l)
+			sort_big_bash_file.write(l + "\n")
 
 		sort_big_bash_file.close()
 
@@ -1162,7 +1162,7 @@ if __name__ == "__main__":
 		sort_big_bash_large_file = open(swarm_files_path + "/" + sort_big_bash_large_fname, 'w')
 
 		for l in sort_big_bash_large_list:
-			sort_big_bash_large_file.write(l)
+			sort_big_bash_large_file.write(l + "\n")
 
 		sort_big_bash_large_file.close()
 
@@ -1180,7 +1180,7 @@ if __name__ == "__main__":
 		sort_big_bash_xlarge_file = open(swarm_files_path + "/" + sort_big_bash_xlarge_fname, 'w')
 
 		for l in sort_big_bash_xlarge_list:
-			sort_big_bash_xlarge_file.write(l)
+			sort_big_bash_xlarge_file.write(l + "\n")
 
 		sort_big_bash_xlarge_file.close()
 
