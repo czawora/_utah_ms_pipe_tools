@@ -49,7 +49,7 @@ session_swarm.close()
 
 session_big_bash = open(session_dir + "/sort_big_bash%s.sh" % refset, 'w')
 
-split_mda = glob.glob(session_dir + "/splits/*/*refset%s*mda_chan" % refset)
+split_mda = glob.glob(session_dir + "/splits_sort/*/*refset%s*mda_chan" % refset)
 
 for mda_fpath in split_mda:
 
