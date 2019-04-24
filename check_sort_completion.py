@@ -125,7 +125,7 @@ if len(present_targets) == len(target_strings):
 			spikeInfo_log.write(f + "\n")
 		spikeInfo_log.close()
 
-		call(["sbatch", session_dir + "/spikeInfo.sh"])
+		#call(["sbatch", session_dir + "/spikeInfo.sh"])
 
 
 else:
