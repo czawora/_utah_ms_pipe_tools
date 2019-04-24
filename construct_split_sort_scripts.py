@@ -4,9 +4,9 @@ import os
 import sys
 import glob
 
-clip_size = 300
+sort_clip_size = 50
+extract_clip_size = 300
 num_features = 2
-run_mode = "seq"
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -65,10 +65,8 @@ for mda_fpath in split_mda:
 	raw_chan_fpath = glob.glob(session_dir + "/splits_raw/*/" + mda_fname)
 	spike_chan_fpath = glob.glob(session_dir + "/splits_spike/*/" + mda_fname)
 
-	# remove the attempts file from a previous run
-	count_fpath = mda_path + "/attempts.log"
-	if os.path.isfile(count_fpath) is True:
-		os.remove(count_fpath)
+	for log_file in glob.glob(mda_path + "/*.log"):
+		os.remove(log_file)
 
 	# time log file
 	time_log_fpath = mda_path + "/time.log"
@@ -78,9 +76,6 @@ for mda_fpath in split_mda:
 	geom_file = open(geom_fpath, 'w')
 	geom_file.write("0,0")
 	geom_file.close()
-
-	if os.path.isfile(mda_path + "/done.log"):
-		os.remove(mda_path + "/done.log")
 
 	# write the sort file
 	sub_cmd_fname = "sort.sh"
@@ -108,7 +103,14 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("attempt_num=`head -c 8 " + mda_path + "/attempts.log`\n")
 	sub_cmd_file.write("fi\n\n")
 
-	sub_cmd_file.write("sort_log_fname=\"_sort_$attempt_num.log\"\n\n")
+	sub_cmd_file.write("total_log_fname=\"_total_$attempt_num.log\"\n")
+	sub_cmd_file.write("sort_log_fname=\"_sort_$attempt_num.log\"\n")
+	sub_cmd_file.write("metrics_log_fname=\"_metrics_$attempt_num.log\"\n")
+	sub_cmd_file.write("isol_metrics_log_fname=\"_isol_metrics_$attempt_num.log\"\n")
+	sub_cmd_file.write("raw_clips_log_fname=\"_raw_clips_$attempt_num.log\"\n")
+	sub_cmd_file.write("sort_clips_log_fname=\"_sort_clips_$attempt_num.log\"\n")
+	sub_cmd_file.write("spike_clips_log_fname=\"_spike_clips_$attempt_num.log\"\n")
+	sub_cmd_file.write("features_log_fname=\"_features_$attempt_num.log\"\n")
 
 	sub_cmd_file.write("if [ ! -f " + mda_path + "/attempts.log ]\n")
 	sub_cmd_file.write("then\n\n")
@@ -186,7 +188,7 @@ for mda_fpath in split_mda:
 	sub_cmd_ms.append("--detect_sign=-1")
 	# sub_cmd_ms.append("--merge_across_channels=false")
 	sub_cmd_ms.append("--fit_stage=false")
-	sub_cmd_ms.append("--clip_size=" + str(clip_size))
+	sub_cmd_ms.append("--clip_size=" + str(sort_clip_size))
 
 	sub_cmd_ms.append("&> " + mda_path + "/$sort_log_fname")
 
@@ -199,6 +201,7 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("echo \"" + mda_path + ":start_msAlg:$start_time\" >> " + time_log_fpath + "\n\n")
 
 	sub_cmd_file.write(" ".join(sub_cmd_ms) + "\n")
+	sub_cmd_file.write("cat " + mda_path + "/$sort_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_msAlg:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -227,7 +230,7 @@ for mda_fpath in split_mda:
 	sub_cmd_met.append("--cluster_metrics_out=" + metrics_out_fpath)
 	sub_cmd_met.append("--samplerate=30000")
 
-	sub_cmd_met.append("&>> " + mda_path + "/$sort_log_fname")
+	sub_cmd_met.append("&>> " + mda_path + "/$metrics_log_fname")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#run metrics\n")
@@ -238,7 +241,8 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":start_metrics:$start_time\" >> " + time_log_fpath + "\n\n")
 
-	sub_cmd_file.write(" ".join(sub_cmd_met) + "\n\n")
+	sub_cmd_file.write(" ".join(sub_cmd_met) + "\n")
+	sub_cmd_file.write("cat " + mda_path + "/$metrics_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_metrics:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -257,7 +261,7 @@ for mda_fpath in split_mda:
 	sub_cmd_isol.append("--pair_metrics_out=" + isol_pair_metrics_out_fpath)
 	sub_cmd_isol.append("--compute_bursting_parents=true")
 
-	sub_cmd_isol.append("&>> " + mda_path + "/$sort_log_fname")
+	sub_cmd_isol.append("&>> " + mda_path + "/$isol_metrics_log_fname")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#run isolation metrics\n")
@@ -268,7 +272,8 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":start_isolMetrics:$start_time\" >> " + time_log_fpath + "\n\n")
 
-	sub_cmd_file.write(" ".join(sub_cmd_isol) + "\n\n")
+	sub_cmd_file.write(" ".join(sub_cmd_isol) + "\n")
+	sub_cmd_file.write("cat " + mda_path + "/$isol_metrics_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_isolMetrics:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -283,9 +288,9 @@ for mda_fpath in split_mda:
 	sub_cmd_clips.append("--timeseries=" + mda_fpath)
 	sub_cmd_clips.append("--firings=" + sort_out_fpath)
 	sub_cmd_clips.append("--clips_out=" + clips_whiten_out_fpath)
-	sub_cmd_clips.append("--clip_size=" + str(clip_size))
+	sub_cmd_clips.append("--clip_size=" + str(extract_clip_size))
 
-	sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
+	sub_cmd_clips.append("&>> " + mda_path + "/$sort_clips_log_fname")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#run extract_clips\n")
@@ -296,7 +301,8 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":start_clips:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-	sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n\n")
+	sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n")
+	sub_cmd_file.write("cat " + mda_path + "/$sort_clips_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -309,9 +315,9 @@ for mda_fpath in split_mda:
 		sub_cmd_clips.append("--timeseries=" + raw_chan_fpath[0])
 		sub_cmd_clips.append("--firings=" + sort_out_fpath)
 		sub_cmd_clips.append("--clips_out=" + clips_raw_out_fpath)
-		sub_cmd_clips.append("--clip_size=" + str(clip_size))
+		sub_cmd_clips.append("--clip_size=" + str(extract_clip_size))
 
-		sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
+		sub_cmd_clips.append("&>> " + mda_path + "/$raw_clips_log_fname")
 
 		sub_cmd_file.write("################################\n")
 		sub_cmd_file.write("#run extract_clips\n")
@@ -322,7 +328,8 @@ for mda_fpath in split_mda:
 		sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 		sub_cmd_file.write("echo \"" + raw_chan_fpath[0] + ":start_clips:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n\n")
+		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n")
+		sub_cmd_file.write("cat " + mda_path + "/$raw_clips_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 		sub_cmd_file.write("done_time=$(date +%s)\n")
 		sub_cmd_file.write("echo \"" + raw_chan_fpath[0] + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -335,9 +342,9 @@ for mda_fpath in split_mda:
 		sub_cmd_clips.append("--timeseries=" + spike_chan_fpath[0])
 		sub_cmd_clips.append("--firings=" + sort_out_fpath)
 		sub_cmd_clips.append("--clips_out=" + clips_spike_out_fpath)
-		sub_cmd_clips.append("--clip_size=" + str(clip_size))
+		sub_cmd_clips.append("--clip_size=" + str(extract_clip_size))
 
-		sub_cmd_clips.append("&>> " + mda_path + "/$sort_log_fname")
+		sub_cmd_clips.append("&>> " + mda_path + "/$spike_clips_log_fname")
 
 		sub_cmd_file.write("################################\n")
 		sub_cmd_file.write("#run extract_clips\n")
@@ -348,7 +355,8 @@ for mda_fpath in split_mda:
 		sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 		sub_cmd_file.write("echo \"" + spike_chan_fpath[0] + ":start_clips:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n\n")
+		sub_cmd_file.write(" ".join(sub_cmd_clips) + "\n")
+		sub_cmd_file.write("cat " + mda_path + "/$spike_clips_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 		sub_cmd_file.write("done_time=$(date +%s)\n")
 		sub_cmd_file.write("echo \"" + spike_chan_fpath[0] + ":done_clips:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -364,11 +372,11 @@ for mda_fpath in split_mda:
 	sub_cmd_feats.append("--timeseries=" + mda_fpath)
 	sub_cmd_feats.append("--firings=" + sort_out_fpath)
 	sub_cmd_feats.append("--features_out=" + features_out_fpath)
-	sub_cmd_feats.append("--clip_size=" + str(clip_size))
+	sub_cmd_feats.append("--clip_size=" + str(sort_clip_size))
 	sub_cmd_feats.append("--num_features=" + str(num_features))
 	sub_cmd_feats.append("--subtract_mean=" + "true")
 
-	sub_cmd_feats.append("&>> " + mda_path + "/$sort_log_fname")
+	sub_cmd_feats.append("&>> " + mda_path + "/$features_log_fname")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#run extract_clip_features\n")
@@ -379,7 +387,8 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":start_features:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-	sub_cmd_file.write(" ".join(sub_cmd_feats) + "\n\n")
+	sub_cmd_file.write(" ".join(sub_cmd_feats) + "\n")
+	sub_cmd_file.write("cat " + mda_path + "/$features_log_fname >> " + mda_path + "/$total_log_fname\n")
 
 	sub_cmd_file.write("done_time=$(date +%s)\n")
 	sub_cmd_file.write("echo \"" + mda_path + ":done_features:$done_time\" >> " + time_log_fpath + ";\n\n")
@@ -436,7 +445,7 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("#check for completion\n")
 	sub_cmd_file.write("################################\n\n")
 
-	sub_cmd_file.write("python3 " + spikes_pipeline_dir + "/check_sort_completion.py " + mda_path + " " + run_mode + " &>> " + mda_path + "/$sort_log_fname\n\n")
+	sub_cmd_file.write("python3 " + spikes_pipeline_dir + "/check_sort_completion.py " + mda_path + " " + session_dir + " &>> " + mda_path + "/$total_log_fname\n\n")
 
 	sub_cmd_file.close()
 

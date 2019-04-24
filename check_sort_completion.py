@@ -3,30 +3,16 @@ import sys
 import os
 import glob
 from subprocess import call
+import pandas as pd
 
 max_attempts = 6
 
-target_strings = []
-target_strings.append(("ms_sort", "Process completed successfully: mountainsortalg.ms3alg", ["firings.mda"] ))
-target_strings.append(("isol_metrics", "Process completed successfully: ms3.isolation_metrics", ["isol_metrics.json", "isol_pair_metrics.json"] ))
-target_strings.append(("clips", "Process completed successfully: ms3.mv_extract_clips", ["clips.mda"] ))
-target_strings.append(("metrics", "Process completed successfully: ms3.cluster_metrics", ["metrics.json"] ))
-target_strings.append(("clip_features", "Process completed successfully: ms3.mv_extract_clips_features", ["clip_features.mda"] ))
-target_strings.append(("plot", "plotChannelSpikes -- done", []))
-
-present_targets = []
-missing_targets = []
-
 if len(sys.argv) < 3:
-	print("first argument should be single channel sort path, second should be 'seq' or 'par' indicating if run mode")
+	print("first argument should be single channel sort path, second argument should be session path")
 	exit(-1)
 
 chan_dir = sys.argv[1]
-run_mode = sys.argv[2]
-
-if run_mode != "seq" and run_mode != "par":
-	print("run mode must be either 'seq' or 'par'")
-	exit(-2)
+session_dir = sys.argv[2]
 
 # is chan_dir valid?
 if os.path.isdir(chan_dir) is False:
@@ -35,7 +21,6 @@ if os.path.isdir(chan_dir) is False:
 
 count_fpath = chan_dir + "/attempts.log"
 if os.path.isfile(count_fpath) is False:
-
 	attempt_num = 1
 else:
 
@@ -47,19 +32,45 @@ else:
 	count_file.close()
 
 
-sort_log = ""
-sort_log_file = open(chan_dir + "/_sort_" + str(attempt_num) + ".log")
+sort_log_fname = "_sort_%d.log" % attempt_num
+metrics_log_fname = "_metrics_%d.log" % attempt_num
+isol_metrics_log_fname = "_isol_metrics_%d.log" % attempt_num
+raw_clips_log_fname = "_raw_clips_%d.log" % attempt_num
+sort_clips_log_fname = "_sort_clips_%d.log" % attempt_num
+spike_clips_log_fname = "_spike_clips_%d.log" % attempt_num
+features_log_fname = "_features_%d.log" % attempt_num
 
-for l in sort_log_file:
-	sort_log += l.strip("\n")
+
+target_strings = []
+target_strings.append(("ms_sort", "Process completed successfully: mountainsortalg.ms3alg", ["firings.mda"], sort_log_fname))
+target_strings.append(("isol_metrics", "Process completed successfully: ms3.isolation_metrics", ["isol_metrics.json", "isol_pair_metrics.json"], isol_metrics_log_fname))
+target_strings.append(("clips_raw", "Process completed successfully: ms3.mv_extract_clips", ["clips_raw.mda"], raw_clips_log_fname))
+target_strings.append(("clips_spike", "Process completed successfully: ms3.mv_extract_clips", ["clips_spike.mda"], spike_clips_log_fname))
+target_strings.append(("clips_whiten", "Process completed successfully: ms3.mv_extract_clips", ["clips_whiten.mda"], sort_clips_log_fname))
+target_strings.append(("metrics", "Process completed successfully: ms3.cluster_metrics", ["metrics.json"], metrics_log_fname))
+target_strings.append(("clip_features", "Process completed successfully: ms3.mv_extract_clips_features", ["clip_features.mda"], features_log_fname))
+
+present_targets = []
+missing_targets = []
+
 
 for t in target_strings:
 
 	tag = t[0]
 	complete_string = t[1]
 	output_files = t[2]
+	log_files = t[3]
 
-	if complete_string in sort_log:
+	# read the log file for this process
+	log_contents = ""
+	log_fid = open(chan_dir + "/" + log_files)
+
+	for l in log_fid:
+		log_contents += l.strip("\n")
+
+	log_fid.close()
+
+	if complete_string in log_contents:
 
 		print("present: " + tag)
 		present_targets.append(tag)
@@ -86,49 +97,35 @@ if len(present_targets) == len(target_strings):
 
 	# count how many used channels there are
 	# get session dir
-	session_spike_dir = "/".join(chan_dir.split("/")[0:-2])
-	used_chan_glob = glob.glob(session_spike_dir + "/*refset*_used_chans.txt")
+	used_jacksheet_glob = glob.glob(session_dir + "/jacksheet_refset*.csv")
 
-	used_chans = []
+	num_used_chans = 0
 
-	for used_chan_fname in used_chan_glob:
+	for used_jacksheet_fpath in used_jacksheet_glob:
 
-		used_chan_file = open(used_chan_fname)
+		used_jacksheet = pd.read_csv(used_jacksheet_fpath)
+		num_used_chans += used_jacksheet.shape[0]
 
-		for l in used_chan_file:
-
-			line = l.strip("\n")
-
-			if line != "":
-
-				used_chans.append(line)
-
-		used_chan_file.close()
-
-	print(used_chans)
-	num_used_chans = len(used_chans)
 	print(num_used_chans)
 
 	# count done.logs
 
 	split_dir = "/".join(chan_dir.split("/")[0:-1])
-
 	done_files = glob.glob(split_dir + "/*/done.log")
 
 	print(done_files)
 	print(len(done_files))
 	if num_used_chans == len(done_files):
 
-		used_chans.sort()
 		done_files.sort()
 
-		spikeInfo_log = open(session_spike_dir + "/_calling_spikeInfo.sh", "w")
+		spikeInfo_log = open(session_dir + "/_calling_spikeInfo.sh", "w")
 
-		for idx, f in enumerate(used_chans):
-			spikeInfo_log.write(used_chans[idx] + "\t" + done_files[idx] + "\n")
+		for f in done_files:
+			spikeInfo_log.write(f + "\n")
 		spikeInfo_log.close()
 
-		call(["sbatch", session_spike_dir + "/spikeInfo.sh"])
+		call(["sbatch", session_dir + "/spikeInfo.sh"])
 
 
 else:
@@ -141,8 +138,5 @@ else:
 
 		print("reruning " + chan_dir)
 
-		if run_mode == "par":
-			call(["sbatch", chan_dir + "/sort.sh"])
-		elif run_mode == "seq":
-			call(["echo", chan_dir + "/sort.sh"])
-			call(["bash", chan_dir + "/sort.sh"])
+		call(["echo", chan_dir + "/sort.sh"])
+		call(["bash", chan_dir + "/sort.sh"])
