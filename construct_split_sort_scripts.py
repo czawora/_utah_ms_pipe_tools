@@ -437,9 +437,9 @@ for mda_fpath in split_mda:
 	# sub_cmd_file.write("done_time=$(date +%s)\n")
 	# sub_cmd_file.write("echo \"" + mda_path + ":done_plotting:$done_time\" >> " + time_log_fpath + ";\n\n")
 	#
-	# sub_cmd_file.write("\n\n")
-	# sub_cmd_file.write("###closing 'fi' for if statement checking presence of firings.mda output file\n")
-	# sub_cmd_file.write("fi\n\n")
+	sub_cmd_file.write("\n\n")
+	sub_cmd_file.write("###closing 'fi' for if statement checking presence of firings.mda output file\n")
+	sub_cmd_file.write("fi\n\n")
 
 	sub_cmd_file.write("################################\n")
 	sub_cmd_file.write("#check for completion\n")
