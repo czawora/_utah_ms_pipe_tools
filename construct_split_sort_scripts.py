@@ -445,7 +445,7 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("#check for completion\n")
 	sub_cmd_file.write("################################\n\n")
 
-	sub_cmd_file.write("python3 " + spikes_pipeline_dir + "/check_sort_completion.py " + mda_path + " " + session_dir + " &>> " + mda_path + "/$total_log_fname\n\n")
+	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + spikes_pipeline_dir + "/check_sort_completion.py " + mda_path + " " + session_dir + " &>> " + mda_path + "/$total_log_fname\n\n")
 
 	sub_cmd_file.close()
 
