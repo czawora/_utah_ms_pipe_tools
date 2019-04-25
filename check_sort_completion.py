@@ -70,7 +70,13 @@ for t in target_strings:
 
 	log_fid.close()
 
-	if complete_string in log_contents:
+	# are all the outputs there?
+	all_output_present = True
+	for of in output_files:
+		if os.path.isfile(chan_dir + "/" + of) is False:
+			all_output_present = False
+
+	if complete_string in log_contents and all_output_present is True:
 
 		print("present: " + tag)
 		present_targets.append(tag)

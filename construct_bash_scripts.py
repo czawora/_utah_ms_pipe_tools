@@ -536,9 +536,9 @@ def write_whiten_sort(session_dir, refset):
 	return(sub_cmd_fpath)
 
 
-def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob, job_name):
+def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
 
-	split_dir = session_dir + "/splits"
+	split_dir = session_dir + "/splits_sort"
 
 	# write the sort file
 	sub_cmd_fname = "spikeInfo.sh"
@@ -549,18 +549,15 @@ def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob,
 	# write the sbatch header for sub_cmd bash file
 	sbatch_header = []
 	sbatch_header.append("#!/bin/bash")
-	sbatch_header.append("#SBATCH --mem=10g")
+	sbatch_header.append("#SBATCH --mem=100g")
 	sbatch_header.append("#SBATCH --cpus-per-task=1")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
+	sbatch_header.append("#SBATCH --time=48:00:00")
+	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
 		sub_cmd_file.write(l + "\n")
-
-	sub_cmd_file.write("#SBATCH --job-name=" + job_name + "\n")
-	sub_cmd_file.write("#SBATCH --dependency=singleton\n")
-	sub_cmd_file.write("#SBATCH --time=48:00:00\n")
-	sub_cmd_file.write("#SBATCH --gres=lscratch:15\n")
 
 	sub_cmd_file.write("\n\n")
 
@@ -582,14 +579,8 @@ def write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob,
 	sub_cmd.append("split_path")
 	sub_cmd.append(split_dir)
 
-	sub_cmd.append("bp_fname_suffix")
-	sub_cmd.append("mda_chan")
-
-	sub_cmd.append("nsx_physio_fpath")
-	sub_cmd.append(nsx_fpath)
-
 	if ns3_glob != []:
-		sub_cmd.append("ns3_pulse_fpath")
+		sub_cmd.append("analog_pulse_fpath")
 		sub_cmd.append(ns3_glob[0])  # ns3_fpath
 
 	if nev_glob != []:
@@ -976,7 +967,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		#################################
 
 		if irefset == 1:
-			write_spikeInfo(session_dir, nsx_fpath, jacksheet_fpath, ns3_glob, nev_glob, job_name)
+			write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob)
 
 		# closing fi for check if _ignore_me.txt is present
 		sort_sbatch_file.write("fi\n\n")
