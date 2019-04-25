@@ -119,7 +119,7 @@ if len(present_targets) == len(target_strings):
 
 		done_files.sort()
 
-		spikeInfo_log = open(session_dir + "/_calling_spikeInfo.sh", "w")
+		spikeInfo_log = open(session_dir + "/_calling_spikeInfo.log", "w")
 
 		for f in done_files:
 			spikeInfo_log.write(f + "\n")
