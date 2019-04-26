@@ -748,12 +748,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			sort_sbatch_file.write("done_time=$(date +%s)\n")
 			sort_sbatch_file.write("echo \"" + sess + ":done_nsx2mda:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-			sort_sbatch_file.write("################################\n")
-			sort_sbatch_file.write("#make check if ignore file is present\n")
-			sort_sbatch_file.write("################################\n\n")
-
-			sort_sbatch_file.write("if [ ! -f " + session_dir + "/_ignore_me%s.txt ]; then\n\n" % str(refset))
-
 			#################################
 			#################################
 			# write sub-command: bandpass_raw
