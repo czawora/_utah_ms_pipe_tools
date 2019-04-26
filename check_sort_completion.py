@@ -105,7 +105,7 @@ if len(present_targets) == len(target_strings):
 	# get session dir
 	used_jacksheet_glob = glob.glob(session_dir + "/combined_used_jacksheet.csv")
 
-	used_jacksheet = pd.read_csv(used_jacksheet_fpath)
+	used_jacksheet = pd.read_csv(used_jacksheet_glob[0])
 	num_used_chans = used_jacksheet.shape[0]
 
 	print(num_used_chans)
