@@ -103,14 +103,10 @@ if len(present_targets) == len(target_strings):
 
 	# count how many used channels there are
 	# get session dir
-	used_jacksheet_glob = glob.glob(session_dir + "/jacksheet_refset*.csv")
+	used_jacksheet_glob = glob.glob(session_dir + "/combined_used_jacksheet.csv")
 
-	num_used_chans = 0
-
-	for used_jacksheet_fpath in used_jacksheet_glob:
-
-		used_jacksheet = pd.read_csv(used_jacksheet_fpath)
-		num_used_chans += used_jacksheet.shape[0]
+	used_jacksheet = pd.read_csv(used_jacksheet_fpath)
+	num_used_chans = used_jacksheet.shape[0]
 
 	print(num_used_chans)
 
