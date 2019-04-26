@@ -63,12 +63,14 @@ for t in target_strings:
 
 	# read the log file for this process
 	log_contents = ""
-	log_fid = open(chan_dir + "/" + log_files)
+	if os.path.isfile(chan_dir + "/" + log_files):
 
-	for l in log_fid:
-		log_contents += l.strip("\n")
+		log_fid = open(chan_dir + "/" + log_files)
 
-	log_fid.close()
+		for l in log_fid:
+			log_contents += l.strip("\n")
+
+		log_fid.close()
 
 	# are all the outputs there?
 	all_output_present = True
