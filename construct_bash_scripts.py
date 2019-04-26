@@ -600,10 +600,15 @@ def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
 	sub_cmd_file.close()
 
 
-def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits):
+def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits, fresh_write):
 
 	session_dir = subj_path + "/" + sess + "/spike"
 	nsx_filesize = os.path.getsize(nsx_fpath)
+
+	print(" (fresh_write) removing " + session_dir, end="")
+	if fresh_write is True:
+		if os.path.isdir(session_dir) is True:
+			shutil.rmtree(session_dir)
 
 	# filename templates
 	bash_fname = "sort_run_all%s.sh"
@@ -1004,6 +1009,7 @@ if __name__ == "__main__":
 	parser.add_argument('--sesslist', default="")
 	parser.add_argument('--output_suffix', default="initial")
 	parser.add_argument('--keep_splits', action='store_false')
+	parser.add_argument('--fresh_write', action='store_true')
 
 	args = parser.parse_args()
 
@@ -1011,6 +1017,7 @@ if __name__ == "__main__":
 	sesslist_fname = args.sesslist
 	output_suffix = args.output_suffix
 	delete_splits = args.keep_splits
+	fresh_write = args.fresh_write
 
 	# convert min_range_cutoff_microvolt to millivolt
 	min_range_cutoff_ungained = 10
@@ -1080,7 +1087,7 @@ if __name__ == "__main__":
 					session_nsx_fpath = session_nsx_glob[0]
 
 					# write session scripts
-					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits)
+					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits, fresh_write)
 					print(command_tuple_list, end = "")
 					session_count = session_count + 1
 
