@@ -610,6 +610,9 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		if os.path.isdir(session_dir) is True:
 			shutil.rmtree(session_dir)
 
+	if os.path.isdir(session_dir) is False:
+		os.mkdir(session_dir)
+
 	# filename templates
 	bash_fname = "sort_run_all%s.sh"
 	bash_log_fname = "_sort_run_all%s.log"
@@ -628,9 +631,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	if jacksheet_nsp_allmicro_filt.empty is False:
 		jacksheet_nsp_allmicro_filt.to_csv(session_dir + "/combined_used_jacksheet.csv")
-
-	if os.path.isdir(session_dir) is False:
-		os.mkdir(session_dir)
 
 	# delete existing split files
 	if delete_splits is True:
