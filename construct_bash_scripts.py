@@ -1,7 +1,6 @@
 
 import os
 import glob
-import time
 import argparse
 import math
 import sys
@@ -536,7 +535,7 @@ def write_whiten_sort(session_dir, refset):
 	return(sub_cmd_fpath)
 
 
-def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
+def write_spikeInfo(session_dir, jacksheet_fpath, combined_jacksheet_fpath, ns3_glob, nev_glob):
 
 	split_dir = session_dir + "/splits_sort"
 
@@ -593,6 +592,9 @@ def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
 	sub_cmd.append("full_jacksheet_fpath")
 	sub_cmd.append(jacksheet_fpath)
 
+	sub_cmd.append("used_jacksheet_fpath")
+	sub_cmd.append(combined_jacksheet_fpath)
+
 	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
@@ -629,8 +631,9 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 	# filter micro channels that do not meet time and range criteria
 	jacksheet_nsp_allmicro_filt = jacksheet_nsp_allmicro.loc[(jacksheet_nsp_allmicro["RangeMilliV"] >= min_range_cutoff_millivolt) & (jacksheet_nsp_allmicro["DurationMin"] >= min_duration_minutes)]
 
+	combined_jacksheet_fpath = session_dir + "/combined_used_jacksheet.csv"
 	if jacksheet_nsp_allmicro_filt.empty is False:
-		jacksheet_nsp_allmicro_filt.to_csv(session_dir + "/combined_used_jacksheet.csv")
+		jacksheet_nsp_allmicro_filt.to_csv(combined_jacksheet_fpath)
 
 	# delete existing split files
 	if delete_splits is True:
@@ -660,7 +663,9 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 		else:
 
-			jacksheet_filt_refset.to_csv(session_dir + "/jacksheet_refset%d.csv" % refset)
+			# save the used jacksheet
+			refset_jacksheet_fpath = session_dir + "/jacksheet_refset%d.csv" % refset
+			jacksheet_filt_refset.to_csv(refset_jacksheet_fpath)
 
 			# set the bash templates to real name
 			current_bash_fname = bash_fname % str(refset)
@@ -700,11 +705,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			sort_sbatch_file.write("\n\n")
 
-			# remove an existing _ignore_me.txt
-			sort_sbatch_file.write("if [ -f " + session_dir + "/_ignore_me%s.txt ]; then\n" % str(refset))
-			sort_sbatch_file.write("rm " + session_dir + "/_ignore_me%s.txt\n" % str(refset))
-			sort_sbatch_file.write("fi\n\n")
-
 			#################################
 			#################################
 			# load MS env
@@ -729,7 +729,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			# write sub-command: nsx2mda
 			#################################
 
-			sub_cmd_fpath = write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset)
+			sub_cmd_fpath = write_nsx2mda(session_dir, nsx_fpath, refset_jacksheet_fpath, refset)
 
 			sort_sbatch_file.write("################################\n")
 			sort_sbatch_file.write("#nsx2mda\n")
@@ -986,10 +986,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			#################################
 
 			if irefset == 1:
-				write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob)
-
-			# closing fi for check if _ignore_me.txt is present
-			sort_sbatch_file.write("fi\n\n")
+				write_spikeInfo(session_dir, jacksheet_fpath, combined_jacksheet_fpath, ns3_glob, nev_glob)
 
 			sort_sbatch_file.close()
 
