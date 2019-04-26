@@ -650,7 +650,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 		if jacksheet_filt_refset.empty is True:
 
 			ignore_fid = open(session_dir + "/ignore_me%d.txt" % refset, 'w')
-			ignore_fid.write("channels from microDev %d do not pass duration ( DurationMin >= " + str(min_duration_minutes) + ") and voltage range filters ( RangeMilliV >= " + str(min_range_cutoff_millivolt) + ")")
+			ignore_fid.write("channels from microDev " + str(refset) + " do not pass duration ( DurationMin >= " + str(min_duration_minutes) + ") and voltage range filters ( RangeMilliV >= " + str(min_range_cutoff_millivolt) + ")")
 			ignore_fid.close()
 
 		else:
