@@ -590,10 +590,7 @@ def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
 	sub_cmd.append("saveRoot")
 	sub_cmd.append(session_dir + "/outputs")
 
-	sub_cmd.append("removeLargeAmpUnits")
-	sub_cmd.append("0")
-
-	sub_cmd.append("jacksheet_fpath")
+	sub_cmd.append("full_jacksheet_fpath")
 	sub_cmd.append(jacksheet_fpath)
 
 	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
@@ -603,10 +600,9 @@ def write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob):
 	sub_cmd_file.close()
 
 
-def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pulse_ext, nsp_suffix, timestamp, delete_splits):
+def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits):
 
 	session_dir = subj_path + "/" + sess + "/spike"
-	job_name = "FRNU--" + timestamp + "--" + sess
 	nsx_filesize = os.path.getsize(nsx_fpath)
 
 	# filename templates
@@ -619,8 +615,14 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	# open the jacksheet and see how many microDevNums there are
 	jacksheet = pd.read_csv(jacksheet_fpath)
-	jacksheet_nsp_micro = jacksheet.loc[(jacksheet["NSPsuffix"] == nsp_suffix) & (jacksheet["MicroDevNum"] >= 1)]
-	jacksheet_unique_dev_num = jacksheet_nsp_micro.MicroDevNum.unique().tolist()
+	jacksheet_nsp_allmicro = jacksheet.loc[(jacksheet["NSPsuffix"] == nsp_suffix) & (jacksheet["MicroDevNum"] >= 1)]
+	jacksheet_unique_dev_num = jacksheet_nsp_allmicro.MicroDevNum.unique().tolist()
+
+	# filter micro channels that do not meet time and range criteria
+	jacksheet_nsp_allmicro_filt = jacksheet_nsp_allmicro.loc[(jacksheet_nsp_allmicro["RangeMilliV"] >= min_range_cutoff_millivolt) & (jacksheet_nsp_allmicro["DurationMin"] >= min_duration_minutes)]
+
+	if jacksheet_nsp_allmicro_filt.empty is False:
+		jacksheet_nsp_allmicro_filt.to_csv(session_dir + "/combined_used_jacksheet.csv")
 
 	if os.path.isdir(session_dir) is False:
 		os.mkdir(session_dir)
@@ -643,336 +645,348 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	for irefset, refset in enumerate(jacksheet_unique_dev_num):
 
-		# set the bash templates to real name
-		current_bash_fname = bash_fname % str(refset)
-		current_bash_log_fname = bash_log_fname % str(refset)
+		jacksheet_filt_refset = jacksheet_nsp_allmicro_filt.loc[jacksheet_nsp_allmicro_filt["MicroDevNum"] == refset]
 
-		# sort by nsx size
-		if nsx_filesize/1e9 < 25:
+		if jacksheet_filt_refset.empty is True:
 
-			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
-			command_tuple_list.append(("small", refset_bash_command))
-
-		elif nsx_filesize/1e9 < 40:
-
-			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
-			command_tuple_list.append(("large", refset_bash_command))
+			ignore_fid = open(session_dir + "/ignore_me%d.txt" % refset, 'w')
+			ignore_fid.write("channels from microDev %d do not pass duration ( DurationMin >= " + str(min_duration_minutes) + ") and voltage range filters ( RangeMilliV >= " + str(min_range_cutoff_millivolt) + ")")
+			ignore_fid.close()
 
 		else:
 
-			refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
-			command_tuple_list.append(("xlarge", refset_bash_command))
+			jacksheet_filt_refset.to_csv(session_dir + "/jacksheet_refset%d.csv" % refset)
 
-		time_log_fpath = session_dir + "/time.log"
-		sort_sbatch_file = open(session_dir + "/" + current_bash_fname, 'w')
+			# set the bash templates to real name
+			current_bash_fname = bash_fname % str(refset)
+			current_bash_log_fname = bash_log_fname % str(refset)
 
-		# write the sbatch header for combo bash file
-		sbatch_header = []
-		sbatch_header.append("#!/bin/bash")
-		sbatch_header.append("#SBATCH --mem=200g")
-		sbatch_header.append("#SBATCH --cpus-per-task=5")
-		sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
-		sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
-		sbatch_header.append("#SBATCH --time=10:00:00")
-		sbatch_header.append("#SBATCH --gres=lscratch:15")
+			# sort by nsx size
+			if nsx_filesize/1e9 < 25:
 
-		for l in sbatch_header:
-			sort_sbatch_file.write(l + "\n")
+				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+				command_tuple_list.append(("small", refset_bash_command))
 
-		sort_sbatch_file.write("\n\n")
+			elif nsx_filesize/1e9 < 40:
 
-		# remove an existing _ignore_me.txt
-		sort_sbatch_file.write("if [ -f " + session_dir + "/_ignore_me%s.txt ]; then\n" % str(refset))
-		sort_sbatch_file.write("rm " + session_dir + "/_ignore_me%s.txt\n" % str(refset))
-		sort_sbatch_file.write("fi\n\n")
+				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+				command_tuple_list.append(("large", refset_bash_command))
 
-		#################################
-		#################################
-		# load MS env
-		#################################
+			else:
 
-		sort_sbatch_file.write("export done_time\n\n")
+				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
+				command_tuple_list.append(("xlarge", refset_bash_command))
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#load ms env\n")
-		sort_sbatch_file.write("################################\n")
+			time_log_fpath = session_dir + "/time.log"
+			sort_sbatch_file = open(session_dir + "/" + current_bash_fname, 'w')
 
-		sort_sbatch_file.write("echo -n \"" + sess + ":start_loadEnv:\" > " + time_log_fpath + "; ")
-		sort_sbatch_file.write("date +%s >> " + time_log_fpath + "\n\n")
+			# write the sbatch header for combo bash file
+			sbatch_header = []
+			sbatch_header.append("#!/bin/bash")
+			sbatch_header.append("#SBATCH --mem=200g")
+			sbatch_header.append("#SBATCH --cpus-per-task=5")
+			sbatch_header.append("#SBATCH --error=" + session_dir + "/" + current_bash_log_fname)
+			sbatch_header.append("#SBATCH --output=" + session_dir + "/" + current_bash_log_fname)
+			sbatch_header.append("#SBATCH --time=10:00:00")
+			sbatch_header.append("#SBATCH --gres=lscratch:15")
 
-		sort_sbatch_file.write("source " + paths.MS_env_source + "\n\n")
+			for l in sbatch_header:
+				sort_sbatch_file.write(l + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_loadEnv:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("\n\n")
 
-		#################################
-		#################################
-		# write sub-command: nsx2mda
-		#################################
+			# remove an existing _ignore_me.txt
+			sort_sbatch_file.write("if [ -f " + session_dir + "/_ignore_me%s.txt ]; then\n" % str(refset))
+			sort_sbatch_file.write("rm " + session_dir + "/_ignore_me%s.txt\n" % str(refset))
+			sort_sbatch_file.write("fi\n\n")
 
-		sub_cmd_fpath = write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset)
+			#################################
+			#################################
+			# load MS env
+			#################################
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#nsx2mda\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("export done_time\n\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#nsx2mda\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#load ms env\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_nsx2mda:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("echo -n \"" + sess + ":start_loadEnv:\" > " + time_log_fpath + "; ")
+			sort_sbatch_file.write("date +%s >> " + time_log_fpath + "\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("source " + paths.MS_env_source + "\n\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_nsx2mda:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_loadEnv:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#make check if ignore file is present\n")
-		sort_sbatch_file.write("################################\n\n")
+			#################################
+			#################################
+			# write sub-command: nsx2mda
+			#################################
 
-		sort_sbatch_file.write("if [ ! -f " + session_dir + "/_ignore_me%s.txt ]; then\n\n" % str(refset))
+			sub_cmd_fpath = write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset)
 
-		#################################
-		#################################
-		# write sub-command: bandpass_raw
-		#################################
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#nsx2mda\n")
+			sort_sbatch_file.write("################################\n")
 
-		sub_cmd_fpath = write_bandpass_raw(session_dir, refset)
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#nsx2mda\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		# add sub_cmd to combu_run file
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_nsx2mda:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#bandpass_raw\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#bandpass_raw\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_nsx2mda:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#make check if ignore file is present\n")
+			sort_sbatch_file.write("################################\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("if [ ! -f " + session_dir + "/_ignore_me%s.txt ]; then\n\n" % str(refset))
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
+			#################################
+			#################################
+			# write sub-command: bandpass_raw
+			#################################
 
-		#################################
-		#################################
-		# write sub-command: reref_raw
-		#################################
+			sub_cmd_fpath = write_bandpass_raw(session_dir, refset)
 
-		sub_cmd_fpath = write_reref_raw(session_dir, refset)
+			# add sub_cmd to combu_run file
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#reref_raw\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#bandpass_raw\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#reref_raw\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#bandpass_raw\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: split_raw
-		#################################
+			#################################
+			#################################
+			# write sub-command: reref_raw
+			#################################
 
-		sub_cmd_fpath = write_split_raw(session_dir, refset)
+			sub_cmd_fpath = write_reref_raw(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#split_raw\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#reref_raw\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#split_raw\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#reref_raw\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_split_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_split_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: bandpass_spikeband
-		#################################
+			#################################
+			#################################
+			# write sub-command: split_raw
+			#################################
 
-		sub_cmd_fpath = write_bandpass_spike(session_dir, refset)
+			sub_cmd_fpath = write_split_raw(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#bandpass_spike\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#split_raw\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#split_raw\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_split_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_split_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: reref_spike
-		#################################
+			#################################
+			#################################
+			# write sub-command: bandpass_spikeband
+			#################################
 
-		sub_cmd_fpath = write_reref_spike(session_dir, refset)
+			sub_cmd_fpath = write_bandpass_spike(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#reref_spike\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#bandpass_spike\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#reref_spike\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_reref_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_reref_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: split_spike
-		#################################
+			#################################
+			#################################
+			# write sub-command: reref_spike
+			#################################
 
-		sub_cmd_fpath = write_split_spike(session_dir, refset)
+			sub_cmd_fpath = write_reref_spike(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#split_spike\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#reref_spike\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#split_spike\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#reref_spike\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_split_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_reref_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_split_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_reref_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: whiten_sort
-		#################################
+			#################################
+			#################################
+			# write sub-command: split_spike
+			#################################
 
-		sub_cmd_fpath = write_whiten_sort(session_dir, refset)
+			sub_cmd_fpath = write_split_spike(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#whiten_sort\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#split_spike\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#whiten_sort\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#split_spike\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_whiten_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_split_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_whiten_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_split_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: split_sort
-		#################################
+			#################################
+			#################################
+			# write sub-command: whiten_sort
+			#################################
 
-		sub_cmd_fpath = write_split_sort(session_dir, refset)
+			sub_cmd_fpath = write_whiten_sort(session_dir, refset)
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#split_sort\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#whiten_sort\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#split_sort\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#whiten_sort\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_split_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_whiten_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_split_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_whiten_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		#################################
-		#################################
-		# write sub-command: sort
-		#################################
+			#################################
+			#################################
+			# write sub-command: split_sort
+			#################################
 
-		sub_cmd_fname = "sort%s.sh" % str(refset)
-		sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
-		sub_cmd_file = open(sub_cmd_fpath, 'w')
+			sub_cmd_fpath = write_split_sort(session_dir, refset)
 
-		sub_cmd_file.write("#!/bin/bash\n\n")
-		sub_cmd_file.write("python3 " + paths.spikes_pipeline_dir + "/construct_split_sort_scripts.py " + session_dir + " " + job_name + " " + str(refset) + "\n")
-		sub_cmd_file.write("bash " + session_dir + "/sort_swarm%s.sh\n" % str(refset))
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#split_sort\n")
+			sort_sbatch_file.write("################################\n")
 
-		sub_cmd_file.close()
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#split_sort\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
 
-		sort_sbatch_file.write("################################\n")
-		sort_sbatch_file.write("#sort\n")
-		sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_split_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("echo \"################################\"\n")
-		sort_sbatch_file.write("echo \"#sort\"\n")
-		sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
 
-		sort_sbatch_file.write("start_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-		sort_sbatch_file.write("echo \"" + sess + ":start_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_split_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
 
-		sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+			#################################
+			#################################
+			# write sub-command: sort
+			#################################
 
-		sort_sbatch_file.write("done_time=$(date +%s)\n")
-		sort_sbatch_file.write("echo \"" + sess + ":done_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
+			sub_cmd_fname = "sort%s.sh" % str(refset)
+			sub_cmd_fpath = session_dir + "/" + sub_cmd_fname
+			sub_cmd_file = open(sub_cmd_fpath, 'w')
 
-		#################################
-		#################################
-		# write sub-command: make spikeInfo
-		#################################
+			sub_cmd_file.write("#!/bin/bash\n\n")
+			sub_cmd_file.write("python3 " + paths.spikes_pipeline_dir + "/construct_split_sort_scripts.py " + session_dir + " " + str(refset) + "\n")
+			sub_cmd_file.write("bash " + session_dir + "/sort_swarm%s.sh\n" % str(refset))
 
-		if irefset == 1:
-			write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob)
+			sub_cmd_file.close()
 
-		# closing fi for check if _ignore_me.txt is present
-		sort_sbatch_file.write("fi\n\n")
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#sort\n")
+			sort_sbatch_file.write("################################\n")
 
-		sort_sbatch_file.close()
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#sort\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_sort:$start_time\" >> " + time_log_fpath + ";\n\n")
+
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_sort:$done_time\" >> " + time_log_fpath + ";\n\n")
+
+			#################################
+			#################################
+			# write sub-command: make spikeInfo
+			#################################
+
+			if irefset == 1:
+				write_spikeInfo(session_dir, jacksheet_fpath, ns3_glob, nev_glob)
+
+			# closing fi for check if _ignore_me.txt is present
+			sort_sbatch_file.write("fi\n\n")
+
+			sort_sbatch_file.close()
 
 	return(command_tuple_list)
 
@@ -998,8 +1012,12 @@ if __name__ == "__main__":
 	output_suffix = args.output_suffix
 	delete_splits = args.keep_splits
 
-	# get current timestamp
-	timestamp = time.strftime("%d_%m_%Y--%H_%M_%S")
+	# convert min_range_cutoff_microvolt to millivolt
+	min_range_cutoff_ungained = 10
+	min_range_cutoff_millivolt = min_range_cutoff_ungained * 0.25 * (1/1000)
+
+	# set time cutoff
+	min_duration_minutes = 5
 
 	# get session list
 	if sesslist_fname != "":
@@ -1062,7 +1080,7 @@ if __name__ == "__main__":
 					session_nsx_fpath = session_nsx_glob[0]
 
 					# write session scripts
-					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, timestamp, delete_splits)
+					command_tuple_list = write_session_scripts(subj_path, sess, session_nsx_fpath, sesion_jacksheet_fpath, analog_pulse_ext, nsp_suffix, min_range_cutoff_millivolt, min_duration_minutes, delete_splits)
 					print(command_tuple_list, end = "")
 					session_count = session_count + 1
 

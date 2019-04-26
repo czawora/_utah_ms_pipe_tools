@@ -28,12 +28,11 @@ sbatch_header.append("#SBATCH --output=/dev/null")
 
 
 if len(sys.argv) < 3:
-	print("first argument should be session path, second should be job name for swarm")
+	print("first argument should be session path, second should be refset num")
 	exit(-2)
 
 session_dir = sys.argv[1]
-job_name = sys.argv[2]
-refset = sys.argv[3]
+refset = sys.argv[2]
 
 # is session_dir valid?
 if os.path.isdir(session_dir) is False:
@@ -44,7 +43,7 @@ if os.path.isdir(session_dir + "/log_dump") is False:
 	os.mkdir(session_dir + "/log_dump")
 
 session_swarm = open(session_dir + "/sort_swarm%s.sh" % refset, 'w')
-session_swarm.write("swarm -g 10 -b 1 -t 2 --partition norm --gres=lscratch:2 --time 2:00:00 -J " + job_name + " --merge-output --logdir " + session_dir + "/log_dump -f " + session_dir + "/sort_big_bash%s.sh" % refset)
+session_swarm.write("swarm -g 10 -b 1 -t 2 --partition norm --gres=lscratch:2 --time 2:00:00 --merge-output --logdir " + session_dir + "/log_dump -f " + session_dir + "/sort_big_bash%s.sh" % refset)
 session_swarm.close()
 
 session_big_bash = open(session_dir + "/sort_big_bash%s.sh" % refset, 'w')
