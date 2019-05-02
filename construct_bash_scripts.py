@@ -99,8 +99,8 @@ def write_bandpass_raw(session_dir, refset):
 	sub_cmd_file.write("echo \"start bandpass_raw\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
-	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_raw_bp\n\n")
+	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_bp\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
 	sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
@@ -129,6 +129,8 @@ def write_bandpass_raw(session_dir, refset):
 
 	sub_cmd_file.write("fi\n")
 	sub_cmd_file.write("done\n")
+
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_reref$\"`\n\n" % str(refset))
 
 	sub_cmd_file.write("echo \"end bandpass_raw\"\n")
 
@@ -162,8 +164,8 @@ def write_bandpass_spike(session_dir, refset):
 	sub_cmd_file.write("echo \"start bandpass_spike\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
-	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_spike_bp\n\n")
+	sub_cmd_file.write("bandpass_input_nsx=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("bandpass_output_mda=${bandpass_input_nsx}_bp\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_nsx}\"\n")
 	sub_cmd_file.write("echo \"output:${bandpass_output_mda}\"\n\n")
@@ -195,7 +197,7 @@ def write_bandpass_spike(session_dir, refset):
 
 	sub_cmd_file.write("echo \"end bandpass_spike\"\n")
 
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -226,8 +228,8 @@ def write_reref_raw(session_dir, refset):
 	sub_cmd_file.write("echo \"start reref_raw\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n" % str(refset))
-	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
+	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_raw_reref\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
 	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
@@ -246,8 +248,6 @@ def write_reref_raw(session_dir, refset):
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
 	sub_cmd_file.write("echo \"end reref_raw\"\n")
-
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -278,8 +278,8 @@ def write_reref_spike(session_dir, refset):
 	sub_cmd_file.write("echo \"start reref_spike\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n" % str(refset))
-	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_reref\n\n")
+	sub_cmd_file.write("bandpass_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_output_mda=${bandpass_input_mda}_spike_reref\n\n")
 
 	sub_cmd_file.write("echo \"input:${bandpass_input_mda}\"\n")
 	sub_cmd_file.write("echo \"output:${reref_output_mda}\"\n\n")
@@ -299,7 +299,7 @@ def write_reref_spike(session_dir, refset):
 
 	sub_cmd_file.write("echo \"end reref_spike\"\n")
 
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -328,7 +328,7 @@ def write_split_raw(session_dir, refset):
 
 	sub_cmd_file.write("\n\n")
 
-	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_raw_reref_bp$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
@@ -355,7 +355,7 @@ def write_split_raw(session_dir, refset):
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_bp_reref$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_reref_bp$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -384,7 +384,7 @@ def write_split_spike(session_dir, refset):
 
 	sub_cmd_file.write("\n\n")
 
-	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
@@ -439,7 +439,7 @@ def write_split_sort(session_dir, refset):
 
 	sub_cmd_file.write("\n\n")
 
-	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n" % str(refset))
+	sub_cmd_file.write("reref_input_mda=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp_whiten$\"`\n" % str(refset))
 	sub_cmd_file.write("echo \"input:${reref_input_mda}\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
@@ -466,7 +466,7 @@ def write_split_sort(session_dir, refset):
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref_whiten$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp_whiten$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -498,7 +498,7 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd_file.write("echo \"start whiten_sort\"\n")
 	sub_cmd_file.write("echo \"SLURM_JOB_ID = $SLURM_JOB_ID\" &> " + session_dir + "/" + sub_cmd_log_fname + "\n")
 
-	sub_cmd_file.write("whiten_input=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n" % str(refset))
+	sub_cmd_file.write("whiten_input=`ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp$\"`\n" % str(refset))
 	sub_cmd_file.write("whiten_output_mda=${whiten_input}_whiten\n\n")
 
 	sub_cmd_file.write("echo \"input:${whiten_input}\"\n")
@@ -528,7 +528,7 @@ def write_whiten_sort(session_dir, refset):
 
 	sub_cmd_file.write("echo \"end whiten_sort\"\n")
 
-	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_bp_reref$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp$\"`\n\n" % str(refset))
 
 	sub_cmd_file.close()
 
@@ -747,6 +747,30 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			#################################
 			#################################
+			# write sub-command: reref_raw
+			#################################
+
+			sub_cmd_fpath = write_reref_raw(session_dir, refset)
+
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#reref_raw\n")
+			sort_sbatch_file.write("################################\n")
+
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#reref_raw\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
+
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
+
+			#################################
+			#################################
 			# write sub-command: bandpass_raw
 			#################################
 
@@ -770,30 +794,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			sort_sbatch_file.write("done_time=$(date +%s)\n")
 			sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
-
-			#################################
-			#################################
-			# write sub-command: reref_raw
-			#################################
-
-			sub_cmd_fpath = write_reref_raw(session_dir, refset)
-
-			sort_sbatch_file.write("################################\n")
-			sort_sbatch_file.write("#reref_raw\n")
-			sort_sbatch_file.write("################################\n")
-
-			sort_sbatch_file.write("echo \"################################\"\n")
-			sort_sbatch_file.write("echo \"#reref_raw\"\n")
-			sort_sbatch_file.write("echo \"################################\"\n")
-
-			sort_sbatch_file.write("start_time=$(date +%s)\n")
-			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-			sort_sbatch_file.write("echo \"" + sess + ":start_reref_raw:$start_time\" >> " + time_log_fpath + ";\n\n")
-
-			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
-
-			sort_sbatch_file.write("done_time=$(date +%s)\n")
-			sort_sbatch_file.write("echo \"" + sess + ":done_reref_raw:$done_time\" >> " + time_log_fpath + ";\n\n")
 
 			#################################
 			#################################
@@ -821,30 +821,6 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			#################################
 			#################################
-			# write sub-command: bandpass_spikeband
-			#################################
-
-			sub_cmd_fpath = write_bandpass_spike(session_dir, refset)
-
-			sort_sbatch_file.write("################################\n")
-			sort_sbatch_file.write("#bandpass_spike\n")
-			sort_sbatch_file.write("################################\n")
-
-			sort_sbatch_file.write("echo \"################################\"\n")
-			sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
-			sort_sbatch_file.write("echo \"################################\"\n")
-
-			sort_sbatch_file.write("start_time=$(date +%s)\n")
-			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
-			sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
-
-			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
-
-			sort_sbatch_file.write("done_time=$(date +%s)\n")
-			sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
-
-			#################################
-			#################################
 			# write sub-command: reref_spike
 			#################################
 
@@ -866,6 +842,30 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			sort_sbatch_file.write("done_time=$(date +%s)\n")
 			sort_sbatch_file.write("echo \"" + sess + ":done_reref_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
+
+			#################################
+			#################################
+			# write sub-command: bandpass_spikeband
+			#################################
+
+			sub_cmd_fpath = write_bandpass_spike(session_dir, refset)
+
+			sort_sbatch_file.write("################################\n")
+			sort_sbatch_file.write("#bandpass_spike\n")
+			sort_sbatch_file.write("################################\n")
+
+			sort_sbatch_file.write("echo \"################################\"\n")
+			sort_sbatch_file.write("echo \"#bandpass_spike\"\n")
+			sort_sbatch_file.write("echo \"################################\"\n")
+
+			sort_sbatch_file.write("start_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"#$((start_time - done_time))\" >> " + time_log_fpath + "\n")
+			sort_sbatch_file.write("echo \"" + sess + ":start_bandpass_spike:$start_time\" >> " + time_log_fpath + ";\n\n")
+
+			sort_sbatch_file.write("bash " + sub_cmd_fpath + "\n")
+
+			sort_sbatch_file.write("done_time=$(date +%s)\n")
+			sort_sbatch_file.write("echo \"" + sess + ":done_bandpass_spike:$done_time\" >> " + time_log_fpath + ";\n\n")
 
 			#################################
 			#################################
@@ -976,8 +976,8 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			# write sub-command: make spikeInfo
 			#################################
 
-			if irefset == 1:
-				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
+			#if irefset == 1:
+			#	write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
 
 			sort_sbatch_file.close()
 
