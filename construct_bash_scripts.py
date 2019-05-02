@@ -535,7 +535,7 @@ def write_whiten_sort(session_dir, refset):
 	return(sub_cmd_fpath)
 
 
-def write_spikeInfo(session_dir, jacksheet_fpath, combined_jacksheet_fpath, ns3_glob, nev_glob):
+def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob):
 
 	split_dir = session_dir + "/splits_sort"
 
@@ -589,9 +589,6 @@ def write_spikeInfo(session_dir, jacksheet_fpath, combined_jacksheet_fpath, ns3_
 	sub_cmd.append("saveRoot")
 	sub_cmd.append(session_dir + "/outputs")
 
-	sub_cmd.append("full_jacksheet_fpath")
-	sub_cmd.append(jacksheet_fpath)
-
 	sub_cmd.append("used_jacksheet_fpath")
 	sub_cmd.append(combined_jacksheet_fpath)
 
@@ -633,6 +630,8 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	combined_jacksheet_fpath = session_dir + "/combined_used_jacksheet.csv"
 	if jacksheet_nsp_allmicro_filt.empty is False:
+		print(jacksheet_nsp_allmicro_filt)
+		input()
 		jacksheet_nsp_allmicro_filt.to_csv(combined_jacksheet_fpath)
 
 	# delete existing split files
@@ -980,7 +979,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			#################################
 
 			if irefset == 1:
-				write_spikeInfo(session_dir, jacksheet_fpath, combined_jacksheet_fpath, ns3_glob, nev_glob)
+				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
 
 			sort_sbatch_file.close()
 

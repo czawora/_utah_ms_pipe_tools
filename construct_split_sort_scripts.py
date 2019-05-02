@@ -5,7 +5,7 @@ import sys
 import glob
 
 sort_clip_size = 50
-extract_clip_size = 300
+extract_clip_size = 301
 num_features = 2
 
 abspath = os.path.abspath(__file__)
