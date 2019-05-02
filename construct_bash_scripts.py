@@ -604,8 +604,8 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 	session_dir = subj_path + "/" + sess + "/spike"
 	nsx_filesize = os.path.getsize(nsx_fpath)
 
-	print(" (fresh_write) removing " + session_dir, end="")
 	if fresh_write is True:
+		print(" (fresh_write) removing " + session_dir, end="")
 		if os.path.isdir(session_dir) is True:
 			shutil.rmtree(session_dir)
 
