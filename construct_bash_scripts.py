@@ -630,9 +630,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	combined_jacksheet_fpath = session_dir + "/combined_used_jacksheet.csv"
 	if jacksheet_nsp_allmicro_filt.empty is False:
-		print(jacksheet_nsp_allmicro_filt)
-		input()
-		jacksheet_nsp_allmicro_filt.to_csv(combined_jacksheet_fpath)
+		jacksheet_nsp_allmicro_filt.to_csv(combined_jacksheet_fpath, index=False)
 
 	# delete existing split files
 	if delete_splits is True:
@@ -664,7 +662,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 			# save the used jacksheet
 			refset_jacksheet_fpath = session_dir + "/jacksheet_refset%d.csv" % refset
-			jacksheet_filt_refset.to_csv(refset_jacksheet_fpath)
+			jacksheet_filt_refset.to_csv(refset_jacksheet_fpath, index=False)
 
 			# set the bash templates to real name
 			current_bash_fname = bash_fname % str(refset)
