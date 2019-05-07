@@ -976,8 +976,8 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			# write sub-command: make spikeInfo
 			#################################
 
-			#if irefset == 1:
-			#	write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
+			if irefset == 1:
+				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
 
 			sort_sbatch_file.close()
 
