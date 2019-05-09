@@ -16,7 +16,7 @@ args = parser.parse_args()
 subj_path = args.subj_path
 rerun = args.rerun
 
-sess_info_list = glob.glob(subj_path + "/*/*_info.txt")
+sess_info_list = glob.glob(subj_path + "/*/*jacksheet*")
 sess_list = ["/".join(iInfo.split("/")[:-1]) for iInfo in sess_info_list]
 
 if len(sess_list) == 0:
@@ -41,7 +41,6 @@ spikeInfo_stats = []
 spikeWaveform_stats = []
 sortSummary_stats = []
 sortFigs_stats = []
-traceFigs_stats = []
 splits_chan_stats = []
 splits_done_stats = []
 
@@ -51,7 +50,7 @@ for idx, sess in enumerate(sess_list):
     sess_name = sess.split("/")[-1]
     sess_path = sess + "/spike"
     sess_path_outputs = sess_path + "/outputs"
-    sess_path_splits = sess_path + "/splits"
+    sess_path_splits = sess_path + "/splits_sort"
 
     total_count += 1
 
@@ -90,11 +89,6 @@ for idx, sess in enumerate(sess_list):
             sortFigs_glob = glob.glob(sess_path + "/outputs/sortFigs/*")
             sortFigs_status = len(sortFigs_glob)
 
-        if os.path.isdir(sess_path + "/outputs/traceFigs"):
-
-            traceFigs_glob = glob.glob(sess_path + "/outputs/traceFigs/*")
-            traceFigs_status = len(traceFigs_glob)
-
     if os.path.isdir(sess_path_splits):
 
         splits_chan_status = len(glob.glob(sess_path_splits + "/*/*mda_chan"))
@@ -106,7 +100,6 @@ for idx, sess in enumerate(sess_list):
     spikeWaveform_stats.append(spikeWaveform_status)
     sortSummary_stats.append(sortSummary_status)
     sortFigs_stats.append(sortFigs_status)
-    traceFigs_stats.append(traceFigs_status)
     splits_chan_stats.append(splits_chan_status)
     splits_done_stats.append(splits_done_status)
 
@@ -121,7 +114,6 @@ for idx, sess in enumerate(sess_list):
     spikeWaveform_status = spikeWaveform_stats[idx]
     sortSummary_status = sortSummary_stats[idx]
     sortFigs_status = sortFigs_stats[idx]
-    traceFigs_status = traceFigs_stats[idx]
     splits_chan_status = splits_chan_stats[idx]
     splits_done_status = splits_done_stats[idx]
 
@@ -134,7 +126,6 @@ for idx, sess in enumerate(sess_list):
     # spikeWaveform = 1
     # sortSummary = 1
     # sortFigs = not easily indicative
-    # traceFigs = not easily indicative
     # splits_chan == splits_done
 
     if ignore_status != 0:
@@ -226,7 +217,7 @@ if rerun:
     spikeInfo_rerun_big_bash_file = swarms_path + "/sort_rerun_spikeInfo_big_bash.sh"
     spikeInfo_rerun_swarm_file = swarms_path + "/sort_rerun_spikeInfo_swarm.sh"
 
-    rerun_sort_swarm_command = "swarm -g 30 -b 1 -t 1 --time 5:00:00 --gres=lscratch:1 --merge-output --logdir "
+    rerun_sort_swarm_command = "swarm -g 30 -b 1 -t 2 --time 5:00:00 --gres=lscratch:15 --merge-output --logdir "
     rerun_sort_swarm_command += swarms_path + "/log_dump"
     rerun_sort_swarm_command += " -f " + spikeInfo_rerun_big_bash_file
 
