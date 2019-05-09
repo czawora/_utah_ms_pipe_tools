@@ -65,9 +65,9 @@ for idx, sess in enumerate(sess_list):
     splits_done_status = 0
 
     # is there a ignore_me.txt in this session
-    if glob.glob(sess_path + "/_ignore_me*") != []:
+    if glob.glob(sess_path + "/ignore_me*") != []:
 
-        ignore_status = len(glob.glob(sess_path + "/_ignore_me*"))
+        ignore_status = len(glob.glob(sess_path + "/ignore_me*"))
 
     if os.path.isdir(sess_path_outputs):
 
@@ -131,7 +131,7 @@ for idx, sess in enumerate(sess_list):
     if ignore_status != 0:
 
         current_ignore_string = ""
-        for ignore_fpath in glob.glob(sess_path + "/_ignore_me*.txt"):
+        for ignore_fpath in glob.glob(sess_path + "/ignore_me*.txt"):
 
             ignore_fname = ignore_fpath.split("/")[-1]
             ignore_file = open(ignore_fpath)
@@ -202,7 +202,7 @@ print("complete session: ignore == 0, outputs == 1, spikeInfo == 1, spikeWavefor
 print()
 print()
 
-print("total sessions (with an *_info.txt file): " + str(total_count))
+print("total sessions (with an jacksheet file): " + str(total_count))
 print("ignore sessions: " + str(len(ignore_strings)))
 print("incomplete sessions: " + str(len(incomplete_strings)))
 print("\tincomplete channel processing: " + str(len(incomplete_chans)))
