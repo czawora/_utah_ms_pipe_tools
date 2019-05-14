@@ -232,17 +232,18 @@ if rerun:
 
     spikeInfo_bash_rerun.close()
 
-    # create file to rerun entire sessions
+    if incomplete_chans_sess != []:
+        # create file to rerun entire sessions
 
-    swarms_path = subj_path + "/_swarms"
-    rerun_sesslist_fname = swarms_path + "/rerun_sesslist.txt"
+        swarms_path = subj_path + "/_swarms"
+        rerun_sesslist_fname = swarms_path + "/rerun_sesslist.txt"
 
-    rerun_sesslist = open(rerun_sesslist_fname, 'w')
+        rerun_sesslist = open(rerun_sesslist_fname, 'w')
 
-    for sess in incomplete_chans_sess:
-        rerun_sesslist.write(sess + "\n")
+        for sess in incomplete_chans_sess:
+            rerun_sesslist.write(sess + "\n")
 
-    rerun_sesslist.close()
+        rerun_sesslist.close()
 
-    print("recreating bash scripts for " + str(len(incomplete_chans)) + " sessions ")
-    call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun"])
+        print("recreating bash scripts for " + str(len(incomplete_chans)) + " sessions ")
+        call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun"])
