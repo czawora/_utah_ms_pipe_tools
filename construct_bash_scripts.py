@@ -648,6 +648,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 
 	print(" ... dev nums: " + " ".join(map(str, jacksheet_unique_dev_num)), end="")
 
+	write_spikeInfo_flag = True
 	for irefset, refset in enumerate(jacksheet_unique_dev_num):
 
 		jacksheet_filt_refset = jacksheet_nsp_allmicro_filt.loc[jacksheet_nsp_allmicro_filt["MicroDevNum"] == refset]
@@ -976,8 +977,9 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			# write sub-command: make spikeInfo
 			#################################
 
-			if irefset == 1:
+			if write_spikeInfo_flag is True:
 				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
+				write_spikeInfo_flag = False
 
 			sort_sbatch_file.close()
 
