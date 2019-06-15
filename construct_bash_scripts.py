@@ -63,7 +63,7 @@ def write_nsx2mda(session_dir, nsx_fpath, jacksheet_fpath, refset):
 	sub_cmd.append(str(refset))
 	sub_cmd.append("jacksheet_fpath")
 	sub_cmd.append(jacksheet_fpath)
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -119,7 +119,7 @@ def write_bandpass_raw(session_dir, refset):
 	sub_cmd.append("--freq_min=1")
 	sub_cmd.append("--freq_max=5000")
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write("for i in `seq 1 5`;\n")
 	sub_cmd_file.write("do\n")
@@ -184,7 +184,7 @@ def write_bandpass_spike(session_dir, refset):
 	sub_cmd.append("--freq_min=600")
 	sub_cmd.append("--freq_max=6000")
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write("for i in `seq 1 5`;\n")
 	sub_cmd_file.write("do\n")
@@ -243,7 +243,7 @@ def write_reref_raw(session_dir, refset):
 	sub_cmd.append("$bandpass_input_mda")
 	sub_cmd.append("$reref_output_mda")
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -293,7 +293,7 @@ def write_reref_spike(session_dir, refset):
 	sub_cmd.append("$bandpass_input_mda")
 	sub_cmd.append("$reref_output_mda")
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -351,7 +351,7 @@ def write_split_raw(session_dir, refset):
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -407,7 +407,7 @@ def write_split_spike(session_dir, refset):
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -462,7 +462,7 @@ def write_split_sort(session_dir, refset):
 	sub_cmd.append("refset")
 	sub_cmd.append(str(refset))
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
@@ -515,7 +515,7 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd.append("--timeseries=${whiten_input}")
 	sub_cmd.append("--timeseries_out=${whiten_output_mda}")
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write("for i in `seq 1 5`;\n")
 	sub_cmd_file.write("do\n")
@@ -592,7 +592,7 @@ def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob):
 	sub_cmd.append("used_jacksheet_fpath")
 	sub_cmd.append(combined_jacksheet_fpath)
 
-	sub_cmd.append("&> " + session_dir + "/" + sub_cmd_log_fname)
+	sub_cmd.append("&>> " + session_dir + "/" + sub_cmd_log_fname)
 
 	sub_cmd_file.write(" ".join(sub_cmd) + "\n")
 
