@@ -548,7 +548,7 @@ def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob):
 	# write the sbatch header for sub_cmd bash file
 	sbatch_header = []
 	sbatch_header.append("#!/bin/bash")
-	sbatch_header.append("#SBATCH --mem=100g")
+	sbatch_header.append("#SBATCH --mem=160g")
 	sbatch_header.append("#SBATCH --cpus-per-task=1")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
