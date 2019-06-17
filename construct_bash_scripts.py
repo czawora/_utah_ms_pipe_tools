@@ -535,7 +535,7 @@ def write_whiten_sort(session_dir, refset):
 	return(sub_cmd_fpath)
 
 
-def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob):
+def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob, partition, spikeInfo_mem):
 
 	split_dir = session_dir + "/splits_sort"
 
@@ -548,7 +548,8 @@ def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob):
 	# write the sbatch header for sub_cmd bash file
 	sbatch_header = []
 	sbatch_header.append("#!/bin/bash")
-	sbatch_header.append("#SBATCH --mem=160g")
+	sbatch_header.append("#SBATCH --mem=" + spikeInfo_mem)
+	sbatch_header.append("#SBATCH --partition=" + partition)
 	sbatch_header.append("#SBATCH --cpus-per-task=1")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
@@ -672,16 +673,22 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			# sort by nsx size
 			if nsx_filesize/1e9 < 25:
 
+				partition = "norm"
+				spikeInfo_mem = "200g"
 				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 				command_tuple_list.append(("small", refset_bash_command))
 
 			elif nsx_filesize/1e9 < 40:
 
+				partition = "largemem"
+				spikeInfo_mem = "500g"
 				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 				command_tuple_list.append(("large", refset_bash_command))
 
 			else:
 
+				partition = "largemem"
+				spikeInfo_mem = "500g"
 				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 				command_tuple_list.append(("xlarge", refset_bash_command))
 
@@ -978,7 +985,7 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			#################################
 
 			if write_spikeInfo_flag is True:
-				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob)
+				write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob, partition, spikeInfo_mem)
 				write_spikeInfo_flag = False
 
 			sort_sbatch_file.close()
