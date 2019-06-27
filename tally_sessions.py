@@ -12,12 +12,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('subj_path')
 parser.add_argument('--rerun', action='store_true')
 parser.add_argument('--copy_incomplete_path')
+parser.add_argument('--copy_safety_off', action='store_true')
 
 args = parser.parse_args()
 
 subj_path = args.subj_path
 rerun = args.rerun
 copy_incomplete_path = args.copy_incomplete_path
+copy_safety_off = args.copy_safety_off
 
 sess_info_list = glob.glob(subj_path + "/*/*jacksheet*")
 sess_list = ["/".join(iInfo.split("/")[:-1]) for iInfo in sess_info_list]
@@ -223,13 +225,17 @@ if copy_incomplete_path is not None and copy_incomplete_path != "":
 
             sess_dir_name = sess.split("/")[-1]
             print("copying " + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
-            shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
+            if copy_safety_off is True:
+                print("safety is off")
+                shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
 
         for sess in incomplete_chans_sess:
 
             sess_dir_name = sess.split("/")[-1]
             print("copying " + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
-            shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
+            if copy_safety_off is True:
+                print("safety is off")
+                shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
 
 if rerun:
 
