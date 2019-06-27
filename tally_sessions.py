@@ -228,7 +228,8 @@ if copy_incomplete_path is not None and copy_incomplete_path != "":
             if copy_safety_off is True:
 
                 print("safety is off")
-                os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
+                if os.path.isdir(copy_incomplete_path + "/" + sess_dir_name) is False:
+                    os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
 
                 for sessfile in glob.glob(sess + "/*"):
                     if os.path.isdir(sessfile) is False:
@@ -242,7 +243,8 @@ if copy_incomplete_path is not None and copy_incomplete_path != "":
             if copy_safety_off is True:
 
                 print("safety is off")
-                os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
+                if os.path.isdir(copy_incomplete_path + "/" + sess_dir_name) is False:
+                    os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
 
                 for sessfile in glob.glob(subj_path + "/" + sess + "/*"):
                     if os.path.isdir(sessfile) is False:
