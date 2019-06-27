@@ -2,6 +2,7 @@
 import os
 import glob
 import argparse
+import shutil
 from subprocess import call
 
 from paths import *
@@ -10,11 +11,13 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('subj_path')
 parser.add_argument('--rerun', action='store_true')
+parser.add_argument('--copy_incomplete_path')
 
 args = parser.parse_args()
 
 subj_path = args.subj_path
 rerun = args.rerun
+copy_incomplete_path = args.copy_incomplete_path
 
 sess_info_list = glob.glob(subj_path + "/*/*jacksheet*")
 sess_list = ["/".join(iInfo.split("/")[:-1]) for iInfo in sess_info_list]
@@ -208,6 +211,25 @@ print("incomplete sessions: " + str(len(incomplete_strings)))
 print("\tincomplete channel processing: " + str(len(incomplete_chans)))
 print("\tincomplete output creation: " + str(len(incomplete_outputs)))
 print("complete sessions: " + str(len(complete_strings)))
+
+if copy_incomplete_path is not None and copy_incomplete_path != "":
+
+    if os.path.isdir(copy_incomplete_path) is False:
+
+        print("copy_incomplete_path=" + copy_incomplete_path + " is not a valid path")
+    else:
+
+        for sess in incomplete_outputs_sess:
+
+            sess_dir_name = sess.split("/")[-1]
+            print("copying " + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
+            shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
+
+        for sess in incomplete_chans_sess:
+
+            sess_dir_name = sess.split("/")[-1]
+            print("copying " + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
+            shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
 
 if rerun:
 
