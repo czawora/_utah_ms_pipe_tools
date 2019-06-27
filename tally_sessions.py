@@ -226,16 +226,28 @@ if copy_incomplete_path is not None and copy_incomplete_path != "":
             sess_dir_name = sess.split("/")[-1]
             print("copying " + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
             if copy_safety_off is True:
+
                 print("safety is off")
-                shutil.copytree(sess, copy_incomplete_path + "/" + sess_dir_name)
+                os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
+
+                for sessfile in glob.glob(sess + "/*"):
+                    if os.path.isdir(sessfile) is False:
+                        sessfile_name = sessfile.split("/")[-1]
+                        shutil.copy(sessfile, copy_incomplete_path + "/" + sess_dir_name + "/" + sessfile_name)
 
         for sess in incomplete_chans_sess:
 
             sess_dir_name = sess.split("/")[-1]
             print("copying " + subj_path + "/" + sess + " --> " + copy_incomplete_path + "/" + sess_dir_name)
             if copy_safety_off is True:
+
                 print("safety is off")
-                shutil.copytree(subj_path + "/" + sess, copy_incomplete_path + "/" + sess_dir_name)
+                os.mkdir(copy_incomplete_path + "/" + sess_dir_name)
+
+                for sessfile in glob.glob(subj_path + "/" + sess + "/*"):
+                    if os.path.isdir(sessfile) is False:
+                        sessfile_name = sessfile.split("/")[-1]
+                        shutil.copy(sessfile, copy_incomplete_path + "/" + sess_dir_name + "/" + sessfile_name)
 
 if rerun:
 
