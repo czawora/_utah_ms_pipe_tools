@@ -91,6 +91,7 @@ for mda_fpath in split_mda:
 
 	sub_cmd_file.write("source " + MS_env_source + "\n\n")
 
+	sub_cmd_file.write("export HOME=/lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
 	sub_cmd_file.write("cp -r " + mountainsort_binaries_dir + " /lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("export PATH=/lscratch/$SLURM_JOB_ID:$PATH\n\n")
