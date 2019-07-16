@@ -91,6 +91,7 @@ for mda_fpath in split_mda:
 
 	sub_cmd_file.write("source " + MS_env_source + "\n\n")
 
+	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
 	sub_cmd_file.write("cp -r " + mountainsort_binaries_dir + " /lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("export PATH=/lscratch/$SLURM_JOB_ID:$PATH\n\n")
 
@@ -444,6 +445,7 @@ for mda_fpath in split_mda:
 	sub_cmd_file.write("#check for completion\n")
 	sub_cmd_file.write("################################\n\n")
 
+	sub_cmd_file.write("rm -r /lscratch/$SLURM_JOB_ID/ms_tmp/*\n")
 	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + spikes_pipeline_dir + "/check_sort_completion.py " + mda_path + " " + session_dir + " &>> " + mda_path + "/$total_log_fname\n\n")
 
 	sub_cmd_file.close()

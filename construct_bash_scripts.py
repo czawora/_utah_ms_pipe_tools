@@ -110,6 +110,8 @@ def write_bandpass_raw(session_dir, refset):
 	sub_cmd_file.write("\trm $bandpass_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
+
 	sub_cmd = []
 	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
 	sub_cmd.append("ms3.bandpass_filter")
@@ -131,6 +133,7 @@ def write_bandpass_raw(session_dir, refset):
 	sub_cmd_file.write("done\n")
 
 	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_raw_reref$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm -r /lscratch/$SLURM_JOB_ID/ms_tmp/*\n")
 
 	sub_cmd_file.write("echo \"end bandpass_raw\"\n")
 
@@ -175,6 +178,8 @@ def write_bandpass_spike(session_dir, refset):
 	sub_cmd_file.write("\trm $bandpass_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
+
 	sub_cmd = []
 	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
 	sub_cmd.append("ms3.bandpass_filter")
@@ -198,6 +203,7 @@ def write_bandpass_spike(session_dir, refset):
 	sub_cmd_file.write("echo \"end bandpass_spike\"\n")
 
 	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm -r /lscratch/$SLURM_JOB_ID/ms_tmp/*\n")
 
 	sub_cmd_file.close()
 
@@ -509,6 +515,8 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd_file.write("\trm $whiten_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
+
 	sub_cmd = []
 	sub_cmd.append(paths.mountainsort_binaries_dir + "/mp-run-process")
 	sub_cmd.append("ms3.whiten")
@@ -529,6 +537,7 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd_file.write("echo \"end whiten_sort\"\n")
 
 	sub_cmd_file.write("rm `ls " + session_dir + "/* | grep \"refset%s\.mda_spike_reref_bp$\"`\n\n" % str(refset))
+	sub_cmd_file.write("rm -r /lscratch/$SLURM_JOB_ID/ms_tmp/*\n")
 
 	sub_cmd_file.close()
 
