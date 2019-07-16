@@ -14,7 +14,7 @@ config_fpath = config_path + "/mountainlab.user.json"
 tmp_path = "/lscratch/" + jobid + "/ms_tmp"
 
 # make the config file findable
-call(["export HOME=/lscratch/" + jobid])
+call(["export", "HOME=/lscratch/" + jobid])
 os.makedirs(config_path, exist_ok=True)
 
 # make the actual tmp path
