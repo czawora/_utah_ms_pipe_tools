@@ -110,6 +110,7 @@ def write_bandpass_raw(session_dir, refset):
 	sub_cmd_file.write("\trm $bandpass_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("export HOME=/lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
 
 	sub_cmd = []
@@ -178,6 +179,7 @@ def write_bandpass_spike(session_dir, refset):
 	sub_cmd_file.write("\trm $bandpass_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("export HOME=/lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
 
 	sub_cmd = []
@@ -515,6 +517,7 @@ def write_whiten_sort(session_dir, refset):
 	sub_cmd_file.write("\trm $whiten_output_mda \n")
 	sub_cmd_file.write("fi\n\n")
 
+	sub_cmd_file.write("export HOME=/lscratch/$SLURM_JOB_ID\n")
 	sub_cmd_file.write("/data/FRNU/installs/install_python/bin/python3 " + paths.spikes_pipeline_dir + "/make_local_mlconfig.py $SLURM_JOB_ID\n")
 
 	sub_cmd = []
@@ -1129,9 +1132,9 @@ if __name__ == "__main__":
 
 	swarm_cpu_count = 10
 
-	sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
-	sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
-	sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:15 --merge-output --logdir "
+	sort_swarm_command = "swarm -g 220 -b %s -t " + str(swarm_cpu_count) + " --time 15:00:00 --gres=lscratch:300 --merge-output --logdir "
+	sort_large_swarm_command = "swarm -g 400 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:600 --merge-output --logdir "
+	sort_xlarge_swarm_command = "swarm -g 700 -b %s -t " + str(swarm_cpu_count) + " --partition largemem --time 15:00:00 --gres=lscratch:600 --merge-output --logdir "
 
 	# make subj_path/run_files if it doesnt exist, bash scripts go in there
 	swarm_files_path = subj_path + "/_swarms"
