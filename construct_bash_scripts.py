@@ -565,7 +565,7 @@ def write_spikeInfo(session_dir, combined_jacksheet_fpath, ns3_glob, nev_glob, p
 	sbatch_header.append("#SBATCH --cpus-per-task=1")
 	sbatch_header.append("#SBATCH --error=" + session_dir + "/" + sub_cmd_log_fname)
 	sbatch_header.append("#SBATCH --output=" + session_dir + "/" + sub_cmd_log_fname)
-	sbatch_header.append("#SBATCH --time=48:00:00")
+	sbatch_header.append("#SBATCH --time=24:00:00")
 	sbatch_header.append("#SBATCH --gres=lscratch:15")
 
 	for l in sbatch_header:
