@@ -251,6 +251,13 @@ if copy_incomplete_path is not None and copy_incomplete_path != "":
                         sessfile_name = sessfile.split("/")[-1]
                         shutil.copy(sessfile, copy_incomplete_path + "/" + sess_dir_name + "/" + sessfile_name)
 
+
+overlap_list = [l for l in incomplete_chans_sess if l in incomplete_outputs_sess]
+if overlap_list != []:
+    print("WARNING: sessions marked as both channel_incomplete and output_incomplete. should not happen")
+    print(overlap_list)
+
+
 if rerun:
 
     # create file to rerun spikeInfos
@@ -288,4 +295,4 @@ if rerun:
         rerun_sesslist.close()
 
         print("recreating bash scripts for " + str(len(incomplete_chans)) + " sessions ")
-        #call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun", "--fresh_write"])
+        call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun", "--fresh_write"])
