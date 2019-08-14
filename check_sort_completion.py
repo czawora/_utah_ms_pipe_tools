@@ -35,6 +35,7 @@ if os.path.isdir(chan_dir) is False:
 	print(chan_dir + " is not a valid directory")
 	exit(-1)
 
+chan_name = chan_dir.split("/")[-1]
 
 # initiate the file that counts the attempts to sort this channel
 # OR read in the current attempt number from the existing file
@@ -151,7 +152,7 @@ if len(present_targets) == len(target_strings):
 		# for debugging, list the done files found
 		done_files.sort()
 
-		spikeInfo_log = open(session_dir + "/_calling_spikeInfo.log", "w")
+		spikeInfo_log = open(session_dir + "/_calling_spikeInfo_" + chan_name + ".log", "w")
 
 		for f in done_files:
 			spikeInfo_log.write(f + "\n")
