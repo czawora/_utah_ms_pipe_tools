@@ -288,4 +288,4 @@ if rerun:
         rerun_sesslist.close()
 
         print("recreating bash scripts for " + str(len(incomplete_chans)) + " sessions ")
-        call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun", "--fresh_write"])
+        #call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun", "--fresh_write"])
