@@ -693,14 +693,14 @@ def write_session_scripts(subj_path, sess, nsx_fpath, jacksheet_fpath, analog_pu
 			elif nsx_filesize/1e9 < 40:
 
 				partition = "largemem"
-				spikeInfo_mem = "500g"
+				spikeInfo_mem = "800g"
 				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 				command_tuple_list.append(("large", refset_bash_command))
 
 			else:
 
 				partition = "largemem"
-				spikeInfo_mem = "500g"
+				spikeInfo_mem = "800g"
 				refset_bash_command = "bash " + session_dir + "/" + current_bash_fname
 				command_tuple_list.append(("xlarge", refset_bash_command))
 

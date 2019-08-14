@@ -259,7 +259,7 @@ if rerun:
     spikeInfo_rerun_big_bash_file = swarms_path + "/sort_rerun_spikeInfo_big_bash.sh"
     spikeInfo_rerun_swarm_file = swarms_path + "/sort_rerun_spikeInfo_swarm.sh"
 
-    rerun_sort_swarm_command = "swarm -g 500 --partition=largemem -b 1 -t 2 --time 10:00:00 --gres=lscratch:15 --merge-output --logdir "
+    rerun_sort_swarm_command = "swarm -g 800 --partition=largemem -b 1 -t 2 --time 24:00:00 --gres=lscratch:15 --merge-output --logdir "
     rerun_sort_swarm_command += swarms_path + "/log_dump"
     rerun_sort_swarm_command += " -f " + spikeInfo_rerun_big_bash_file
 
@@ -288,4 +288,4 @@ if rerun:
         rerun_sesslist.close()
 
         print("recreating bash scripts for " + str(len(incomplete_chans)) + " sessions ")
-        call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun"])
+        call(["python3", spikes_pipeline_dir + "/construct_bash_scripts.py", subj_path, "--sesslist", rerun_sesslist_fname, "--output_suffix", "rerun", "--fresh_write"])
