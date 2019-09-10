@@ -285,7 +285,7 @@ if rerun or fresh_rerun:
         spikeInfo_bash_rerun.close()
 
     else:
-        incomplete_chans_sess += incomplete_outputs_sess
+        incomplete_chans_sess += [i.split("/")[-1] for i in incomplete_outputs_sess]
 
     if incomplete_chans_sess != []:
         # create file to rerun entire sessions
